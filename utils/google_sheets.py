@@ -1,13 +1,22 @@
-#utils/google_sheets.py
-
 import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
+from dotenv import load_dotenv
+import os
 
-def get_sheet(worksheet_name, sheet_id):
+# Carrega variáveis de ambiente
+load_dotenv()
+
+def get_sheet(worksheet_name):
     """Lê uma aba do Google Sheets e retorna um DataFrame"""
     scope = ["https://spreadsheets.google.com/feeds",
              "https://www.googleapis.com/auth/drive"]
+
+    # Pega o ID da planilha do .env
+    sheet_id = os.getenv('GOOGLE_SHEETS_ID')
+    
+    if not sheet_id:
+        raise ValueError("GOOGLE_SHEETS_ID não encontrado no .env")
 
     creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
     client = gspread.authorize(creds)

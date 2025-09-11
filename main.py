@@ -1,11 +1,15 @@
-# main
-
 import streamlit as st
 from streamlit_option_menu import option_menu
-import pages.vendas as vendas
-import pages.sellout as sellout
-import pages.metas as metas
+import module.vendas as vendas
+import module.sellout as sellout
+import module.metas as metas
+from dotenv import load_dotenv
+import os
 
+# Carrega variáveis de ambiente
+load_dotenv()
+
+# Configuração inicialização pagina
 st.set_page_config(page_title="Dashboard Dani", layout="wide")
 
 # Cabeçalho com menu horizontal
