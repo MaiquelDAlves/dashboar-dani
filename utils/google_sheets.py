@@ -1,6 +1,12 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
+from dotenv import load_dotenv
+import os
+
+#Utilizando .env para pegar o ID da planilha
+load_dotenv()
+planilha_id = os.getenv("GOOGLE_SHEETS_ID")
 
 
 file_name = "credentials.json"
@@ -16,7 +22,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_name(
 client = gspread.authorize(creds)
 
 # Abrir planilha completa pelo ID
-planilha_completa = client.open_by_key("1QfKzFTBHllSmWcYHSeLq9pvqGSx6DPeTVe3eYvVKUXY")
+planilha_completa = client.open_by_key(planilha_id)
 
 # Seleciona as abas d planilh
 planilha_vendas = planilha_completa.get_worksheet(0)

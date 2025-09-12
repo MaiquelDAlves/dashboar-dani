@@ -1,0 +1,37 @@
+# ================================
+# Credenciais e variáveis sensíveis
+# ================================
+credentials.json
+.env
+
+# ================================
+# Cache e arquivos temporários do Python
+# ================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ================================
+# Ambiente virtual
+# ================================
+venv/
+env/
+.env.local
+
+# ================================
+# Logs
+# ================================
+*.log
+
+# ================================
+# IDEs e sistemas operacionais
+# ================================
+.vscode/
+.idea/
+.DS_Store
+
+# ================================
+# Arquivos de notebook temporários (opcional)
+# ================================
+.ipynb_checkpoints/
