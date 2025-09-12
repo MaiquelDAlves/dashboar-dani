@@ -3,11 +3,13 @@ import module.sellout as sellout
 import module.metas as metas
 import streamlit as st
 from utils.configuracoes_pg import configuracoes_pg
+import module.sidebar as sidebar
 
 # Configurações da página
 configuracoes_pg()
 
-st.sidebar.title("Dashboard Dani")
+# Visualizaçõ do sidebar
+sidebar.sidebar()
 
 # Criação das abas
 tab1, tab2, tab3 = st.tabs(["Vendas", "Sell-out", "Metas"])
