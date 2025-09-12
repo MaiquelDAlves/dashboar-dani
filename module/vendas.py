@@ -7,5 +7,4 @@ data_planilha_vendas = mostrar_planilha(planilha_vendas)
 
 # Função para exibir os dados da planilha de vendas
 def vendas():
-  st.title("Módulo de Vendas")
   st.write(data_planilha_vendas)
