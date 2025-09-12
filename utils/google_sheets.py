@@ -31,6 +31,6 @@ planilha_metas = planilha_completa.get_worksheet(2)
 
 # Função para criar o data frame
 def mostrar_planilha(planilha):
-  dados = planilha.get_all_records()
-  df = pd.DataFrame(dados)
-  print(df)
+    dados = planilha.get_all_records()
+    df = pd.DataFrame(dados)
+    return df
