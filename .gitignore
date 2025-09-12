@@ -1,8 +1,16 @@
 # ================================
 # Credenciais e variáveis sensíveis
 # ================================
-credentials.json
+# Arquivos de credenciais
 .env
+utils/credentials.json
+
+# Cache do Streamlit
+.streamlit/
+
+# Dados locais
+data/
+
 
 # ================================
 # Cache e arquivos temporários do Python
