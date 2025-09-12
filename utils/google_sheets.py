@@ -29,15 +29,8 @@ planilha_vendas = planilha_completa.get_worksheet(0)
 planilha_sellout = planilha_completa.get_worksheet(1)
 planilha_metas = planilha_completa.get_worksheet(2)
 
-# Transformar em DataFrame os dados das abas
-dados_vendas = planilha_vendas.get_all_records()
-dados_sellout = planilha_sellout.get_all_records()
-dados_metas = planilha_metas.get_all_records()
-
 # Função para criar o data frame
 def mostrar_planilha(planilha):
   dados = planilha.get_all_records()
   df = pd.DataFrame(dados)
   print(df)
-
-mostrar_planilha(planilha_metas)

@@ -3,7 +3,7 @@
 # ================================
 # Arquivos de credenciais
 .env
-utils/credentials.json
+credentials.json
 
 # Cache do Streamlit
 .streamlit/
