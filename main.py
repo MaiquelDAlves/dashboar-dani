@@ -7,10 +7,17 @@ from utils.configuracoes_pg import configuracoes_pg
 # Configurações da página
 configuracoes_pg()
 
+st.sidebar.title("Dashboard Dani")
 
-# Session statde de configuração da página
-if 'pagina atual' not in st.session_state:
-    st.session_state['pagina atual'] = 'Vendas'
+# Criação das abas
+tab1, tab2, tab3 = st.tabs(["Vendas", "Sell-out", "Metas"])
 
-
-
+with tab1:
+    st.header("Vendas")
+    vendas.vendas()
+with tab2:
+    st.header("Sell-out ")
+    sellout.sellout() 
+with tab3:
+    st.header("Metas")
+    metas.metas()
