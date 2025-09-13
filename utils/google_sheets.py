@@ -24,7 +24,7 @@ client = gspread.authorize(creds)
 # Abrir planilha completa pelo ID
 planilha_completa = client.open_by_key(planilha_id)
 
-# Seleciona as abas d planilh
+# Seleciona as abas da planilha
 planilha_vendas = planilha_completa.get_worksheet(0)
 planilha_sellout = planilha_completa.get_worksheet(1)
 planilha_metas = planilha_completa.get_worksheet(2)
