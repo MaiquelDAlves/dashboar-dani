@@ -20,8 +20,28 @@ def sidebar(key_suffix="vendas"):
         default=colunas_opcoes,
         key=f"colunas_{key_suffix}"   # 🔑 chave única por aba
     )
+  
 
+    filtro_sectbox_coluna = st.sidebar.selectbox(
+        "Selecione a coluna:", 
+        options=opcao_multiselect, 
+        key=f"select_{key_suffix}"  # 🔑 chave
+    )
+
+    if not filtro_sectbox_coluna:
+        return ["Valor Total"]  # Retorna apenas 'Valor Total' se nada for selecionado
+    else:
+        filtro_sectbox_valor = st.sidebar.selectbox(
+            "Selecione o valor:",
+            options=  data_planilha_vendas[filtro_sectbox_coluna].unique(),
+            key=f"valor_{key_suffix}"  # 🔑 chave   
+        )
+
+    col1, col2 = st.sidebar.columns(2)
+    col1.button("Filtrar", width='stretch')
+    col2.button("Limpar", width='stretch')
+        
     # Garante que 'Valor Total' sempre esteja presente
     colunas_finais = opcao_multiselect + ["Valor Total"]
-
+    st.write(f"Colunas selecionadas: {colunas_finais}")
     return colunas_finais
