@@ -1,7 +1,6 @@
 # vendas.py
 
 import streamlit as st
-import time
 import locale
 from utils.google_sheets import planilha_vendas, mostrar_planilha
 from utils.filtros import filtro_principal, tratar_dados
@@ -44,6 +43,15 @@ def vendas(key_suffix):
     # Montar dataframe final (mantendo datetime para operações)
     df = dados_completos[mask_data][opcoes["colunas"]]
     
+    # APLICAR FILTRO APENAS SE NÃO FOR "TODOS" EM AMBOS OS SELECTBOXES
+    if (opcoes["filtro_coluna"] and 
+        opcoes["filtro_coluna"] != "Todos" and 
+        opcoes["filtro_valor"] and 
+        opcoes["filtro_valor"] != "Todos"):
+        
+        # Aplicar filtro apenas se não for "Todos" em ambos
+        df = df[df[opcoes["filtro_coluna"]] == opcoes["filtro_valor"]]
+    
     # Criar cópia para exibição com data formatada
     df_display = df.copy()
     
@@ -54,27 +62,6 @@ def vendas(key_suffix):
     # Set index para a data formatada
     df_display = df_display.set_index("Data de Emissão")
     
-    # Aplicar filtro adicional se solicitado (no dataframe original)
-    if opcoes["filtrar"] and opcoes["filtro_coluna"] and opcoes["filtro_valor"]:
-        df_filtered = df[df[opcoes["filtro_coluna"]] == opcoes["filtro_valor"]]
-        # Atualizar df_display com os dados filtrados
-        df_display_filtered = df_filtered.copy()
-        if "Data de Emissão" in df_display_filtered.columns:
-            df_display_filtered["Data de Emissão"] = df_display_filtered["Data de Emissão"].dt.strftime("%d/%m/%Y")
-        df_display = df_display_filtered.set_index("Data de Emissão")
-
-    # Reset filtro
-    if opcoes["limpar"]:
-        msg = st.empty()
-        msg.success("Filtros removidos com sucesso!")
-        time.sleep(2)
-        msg.empty()
-        # Recarregar dados completos formatados
-        df_display = dados_completos[mask_data][opcoes["colunas"]].copy()
-        if "Data de Emissão" in df_display.columns:
-            df_display["Data de Emissão"] = df_display["Data de Emissão"].dt.strftime("%d/%m/%Y")
-        df_display = df_display.set_index("Data de Emissão")
-
     # Exibir dataframe com data formatada
     st.dataframe(
         df_display.style.format({
@@ -83,4 +70,9 @@ def vendas(key_suffix):
     )
     
     # Mostrar estatísticas
-    st.info(f"Total de registros: {len(df_display)} | Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+    total_registros = len(df_display)
+    valor_total = df_display["Valor Total"].sum() if "Valor Total" in df_display.columns else 0
+    
+    st.info(f"Total de registros: {total_registros} | Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+    st.write(f"**Valor Total:** {locale.currency(valor_total, grouping=True, symbol=True)}")
+ 

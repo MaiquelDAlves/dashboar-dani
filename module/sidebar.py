@@ -82,25 +82,22 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
     # Selectbox para escolher a coluna de filtro
     opcao_selectbox_coluna = st.sidebar.selectbox(
         "Selecione a coluna para filtro:",
-        options=opcao_multiselect,
+        options=["Todos"] + opcao_multiselect,
         key=f"select_{key_suffix}"
     )
 
     # Selectbox para escolher o valor (usando dados filtrados!)
-    opcao_selectbox_valor = None
-    if opcao_selectbox_coluna:
+    opcao_selectbox_valor = "Todos"  # Valor padrão
+    
+    # Só mostra selectbox de valor se uma coluna específica for selecionada
+    if opcao_selectbox_coluna and opcao_selectbox_coluna != "Todos":
         # Ordenar valores únicos para melhor visualização
         valores_unicos = sorted(dados_para_filtros[opcao_selectbox_coluna].dropna().unique())
         opcao_selectbox_valor = st.sidebar.selectbox(
             "Selecione o valor:",
-            options=valores_unicos,
+            options=["Todos"] + valores_unicos,
             key=f"valor_{key_suffix}"
         )
-
-    # Botões
-    col1, col2 = st.sidebar.columns(2)
-    status_filtrar = col1.button("Filtrar", key=f"btn_filtrar_{key_suffix}", use_container_width=True)
-    status_limpar = col2.button("Limpar", key=f"btn_limpar_{key_suffix}", use_container_width=True)
 
     # Colunas fixas sempre presentes
     colunas_finais = ["Data de Emissão"] + opcao_multiselect + ["Quantidade", "Valor Total"]
@@ -109,8 +106,6 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
         "colunas": colunas_finais,
         "filtro_coluna": opcao_selectbox_coluna,
         "filtro_valor": opcao_selectbox_valor,
-        "filtrar": status_filtrar,
-        "limpar": status_limpar
     }
 
 # Função de compatibilidade para outros módulos
