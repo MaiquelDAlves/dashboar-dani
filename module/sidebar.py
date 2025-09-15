@@ -1,18 +1,74 @@
-#sidebar.py
+# sidebar.py
 
 import streamlit as st
 from utils.filtros import filtro_principal, filtro_coluna
 from utils.google_sheets import planilha_vendas, mostrar_planilha
+import datetime
+import pandas as pd
 
 # Carregar os dados da planilha de vendas
 data_planilha_vendas = mostrar_planilha(planilha_vendas)
 
-def sidebar(key_suffix="vendas"):
+def sidebar_datas(key_suffix="vendas"):
+    """Apenas para selecionar datas - chamada uma vez"""
     st.sidebar.title("Dashboard Dani")
 
-    # Pega todas as colunas, exceto 'Valor Total'
+    # Garantir que "Data de Emissão" seja datetime
+    data_planilha_vendas["Data de Emissão"] = pd.to_datetime(
+        data_planilha_vendas["Data de Emissão"],
+        dayfirst=True,
+        errors="coerce"
+    )
+
+    # Determinar min e max do dataframe
+    min_value = data_planilha_vendas["Data de Emissão"].min().date()
+    max_value = data_planilha_vendas["Data de Emissão"].max().date()
+
+    # Definir range inicial: primeiro dia do mês do max_value até max_value
+    range_inicial = (datetime.date(max_value.year, max_value.month, 1), max_value)
+
+    # Date input com KEY única
+    data = st.sidebar.date_input(
+        "Selecione uma data:",
+        value=range_inicial,
+        min_value=min_value,
+        max_value=max_value,
+        format="DD/MM/YYYY",
+        key=f"date_input_{key_suffix}"  # KEY ÚNICA AQUI!
+    )
+
+    # Garantir que 'data' seja sempre tupla de duas datas
+    if isinstance(data, datetime.date):
+        data = (data, data)
+    elif isinstance(data, (list, tuple)):
+        if len(data) == 1:
+            data = (data[0], data[0])
+        elif len(data) == 0:
+            data = range_inicial
+        else:
+            data = tuple(data)
+    else:
+        data = range_inicial
+
+    # Verificar se temos pelo menos duas datas
+    if len(data) >= 2:
+        st.sidebar.write(f"Data selecionada: {data[0].strftime('%d/%m/%Y')} até {data[1].strftime('%d/%m/%Y')}")
+    else:
+        data = (min_value, max_value)
+        st.sidebar.write(f"Data selecionada: {data[0].strftime('%d/%m/%Y')} até {data[1].strftime('%d/%m/%Y')}")
+
+    return data
+
+def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
+    """Para os outros filtros - chamada depois com dados filtrados"""
+    
+    # Use dados filtrados se fornecidos, senão use dados completos
+    dados_para_filtros = dados_filtrados_por_data if dados_filtrados_por_data is not None else data_planilha_vendas
+
+    # Colunas opcionais para o usuário selecionar (usando dados filtrados!)
     colunas_opcoes = [
-        c for c in filtro_coluna(filtro_principal(data_planilha_vendas)) if c != "Valor Total"
+        c for c in filtro_coluna(filtro_principal(dados_para_filtros))
+        if c not in ["Valor Total", "Quantidade", "Data de Emissão"]
     ]
 
     # Multiselect com key única
@@ -20,38 +76,51 @@ def sidebar(key_suffix="vendas"):
         "Selecione as colunas para exibir:",
         options=colunas_opcoes,
         default=colunas_opcoes,
-        key=f"colunas_{key_suffix}"   # 🔑 chave única por aba
+        key=f"colunas_{key_suffix}"
     )
 
     # Selectbox para escolher a coluna de filtro
     opcao_selectbox_coluna = st.sidebar.selectbox(
-        "Selecione a coluna para filtro:", 
-        options=opcao_multiselect, 
-        key=f"select_{key_suffix}"  
+        "Selecione a coluna para filtro:",
+        options=opcao_multiselect,
+        key=f"select_{key_suffix}"
     )
 
-    # Selectbox para escolher o valor
+    # Selectbox para escolher o valor (usando dados filtrados!)
     opcao_selectbox_valor = None
     if opcao_selectbox_coluna:
+        # Ordenar valores únicos para melhor visualização
+        valores_unicos = sorted(dados_para_filtros[opcao_selectbox_coluna].dropna().unique())
         opcao_selectbox_valor = st.sidebar.selectbox(
             "Selecione o valor:",
-            options=data_planilha_vendas[opcao_selectbox_coluna].unique(),
-            key=f"valor_{key_suffix}"   
+            options=valores_unicos,
+            key=f"valor_{key_suffix}"
         )
 
     # Botões
     col1, col2 = st.sidebar.columns(2)
-    status_filtrar = col1.button("Filtrar", key=f"btn_filtrar_{key_suffix}", width='stretch')
-    status_limpar = col2.button("Limpar", key=f"btn_limpar_{key_suffix}", width='stretch')
+    status_filtrar = col1.button("Filtrar", key=f"btn_filtrar_{key_suffix}", use_container_width=True)
+    status_limpar = col2.button("Limpar", key=f"btn_limpar_{key_suffix}", use_container_width=True)
 
-    # Garante que 'Valor Total' sempre esteja presente
-    colunas_finais = opcao_multiselect + ["Valor Total"]
+    # Colunas fixas sempre presentes
+    colunas_finais = ["Data de Emissão"] + opcao_multiselect + ["Quantidade", "Valor Total"]
 
-    # Retorna TUDO necessário para aplicar no DataFrame
     return {
         "colunas": colunas_finais,
         "filtro_coluna": opcao_selectbox_coluna,
         "filtro_valor": opcao_selectbox_valor,
         "filtrar": status_filtrar,
         "limpar": status_limpar
+    }
+
+# Função de compatibilidade para outros módulos
+def sidebar(key_suffix="vendas"):
+    """Função principal para compatibilidade com outros módulos"""
+    datas = sidebar_datas(key_suffix)
+    filtros = sidebar_filtros(key_suffix)
+    
+    # Combinar os resultados
+    return {
+        **filtros,
+        "data": datas
     }
