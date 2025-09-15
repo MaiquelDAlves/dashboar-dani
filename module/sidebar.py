@@ -1,3 +1,5 @@
+#sidebar.py
+
 import streamlit as st
 from utils.filtros import filtro_principal, filtro_coluna
 from utils.google_sheets import planilha_vendas, mostrar_planilha
@@ -20,28 +22,36 @@ def sidebar(key_suffix="vendas"):
         default=colunas_opcoes,
         key=f"colunas_{key_suffix}"   # 🔑 chave única por aba
     )
-  
 
-    filtro_sectbox_coluna = st.sidebar.selectbox(
-        "Selecione a coluna:", 
+    # Selectbox para escolher a coluna de filtro
+    opcao_selectbox_coluna = st.sidebar.selectbox(
+        "Selecione a coluna para filtro:", 
         options=opcao_multiselect, 
-        key=f"select_{key_suffix}"  # 🔑 chave
+        key=f"select_{key_suffix}"  
     )
 
-    if not filtro_sectbox_coluna:
-        return ["Valor Total"]  # Retorna apenas 'Valor Total' se nada for selecionado
-    else:
-        filtro_sectbox_valor = st.sidebar.selectbox(
+    # Selectbox para escolher o valor
+    opcao_selectbox_valor = None
+    if opcao_selectbox_coluna:
+        opcao_selectbox_valor = st.sidebar.selectbox(
             "Selecione o valor:",
-            options=  data_planilha_vendas[filtro_sectbox_coluna].unique(),
-            key=f"valor_{key_suffix}"  # 🔑 chave   
+            options=data_planilha_vendas[opcao_selectbox_coluna].unique(),
+            key=f"valor_{key_suffix}"   
         )
 
+    # Botões
     col1, col2 = st.sidebar.columns(2)
-    col1.button("Filtrar", width='stretch')
-    col2.button("Limpar", width='stretch')
-        
+    status_filtrar = col1.button("Filtrar", key=f"btn_filtrar_{key_suffix}", width='stretch')
+    status_limpar = col2.button("Limpar", key=f"btn_limpar_{key_suffix}", width='stretch')
+
     # Garante que 'Valor Total' sempre esteja presente
     colunas_finais = opcao_multiselect + ["Valor Total"]
-    st.write(f"Colunas selecionadas: {colunas_finais}")
-    return colunas_finais
+
+    # Retorna TUDO necessário para aplicar no DataFrame
+    return {
+        "colunas": colunas_finais,
+        "filtro_coluna": opcao_selectbox_coluna,
+        "filtro_valor": opcao_selectbox_valor,
+        "filtrar": status_filtrar,
+        "limpar": status_limpar
+    }
