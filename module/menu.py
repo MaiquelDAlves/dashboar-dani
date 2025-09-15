@@ -8,10 +8,10 @@ def menu():
 
   with tab1:
       st.header("Vendas")
-      vendas.vendas()
+      vendas.vendas("vendas")
   with tab2:
       st.header("Sell-out ")
-      sellout.sellout() 
+      sellout.sellout("sellout") 
   with tab3:
       st.header("Metas")
-      metas.metas()
+      metas.metas("metas")

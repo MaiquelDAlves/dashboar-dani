@@ -6,8 +6,5 @@ import module.menu as menu
 # Configurações da página
 configuracoes_pg()
 
-# Visualizaçõ do sidebar
-sidebar.sidebar()
-
 # Criação das abas
 menu.menu()

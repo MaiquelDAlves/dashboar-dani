@@ -1,10 +1,11 @@
 import streamlit as st
-import pandas as pd
-from utils.google_sheets import planilha_vendas, planilha_sellout, planilha_metas, mostrar_planilha
+from utils.google_sheets import planilha_vendas, mostrar_planilha
+from utils.filtros import filtro_principal
+from module.sidebar import sidebar
 
-# Carregar os dados da planilha de vendas
 data_planilha_vendas = mostrar_planilha(planilha_vendas)
 
-# Função para exibir os dados da planilha de vendas
-def vendas():
-  st.write(data_planilha_vendas)
+def vendas(key_suffix):
+    colunas_escolhidas = sidebar("vendas")  # 👈 key exclusiva para vendas
+    df = filtro_principal(data_planilha_vendas)[colunas_escolhidas]
+    st.dataframe(df)
