@@ -63,7 +63,7 @@ def vendas(key_suffix):
     total_registros = len(df_display)
     valor_total = df_display["Valor Total"].sum() if "Valor Total" in df_display.columns else 0
     
-    st.info(f"Total de registros: {total_registros} | Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+    st.info(f"Total de registros filtro: {total_registros} | Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
     st.write(f"**Valor Total:** {locale.currency(valor_total, grouping=True, symbol=True)}")
      
     
