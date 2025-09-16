@@ -160,7 +160,7 @@ def vendas(key_suffix):
                 st.empty()  # Coluna vazia
             with col3:
                 st.empty()  # Coluna vazia
-
+    st.divider()
     # Set index para a data formatada
     df_display = df_display.set_index("Data de Emissão")
     
