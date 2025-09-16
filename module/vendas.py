@@ -58,6 +58,14 @@ def vendas(key_suffix):
     # Formatar a coluna "Data de Emissão" para DD/MM/AAAA
     if "Data de Emissão" in df_display.columns:
         df_display["Data de Emissão"] = df_display["Data de Emissão"].dt.strftime("%d/%m/%Y")
+
+    # Mostrar estatísticas
+    total_registros = len(df_display)
+    valor_total = df_display["Valor Total"].sum() if "Valor Total" in df_display.columns else 0
+    
+    st.info(f"Total de registros: {total_registros} | Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+    st.write(f"**Valor Total:** {locale.currency(valor_total, grouping=True, symbol=True)}")
+     
     
     # Set index para a data formatada
     df_display = df_display.set_index("Data de Emissão")
@@ -69,10 +77,4 @@ def vendas(key_suffix):
         })
     )
     
-    # Mostrar estatísticas
-    total_registros = len(df_display)
-    valor_total = df_display["Valor Total"].sum() if "Valor Total" in df_display.columns else 0
     
-    st.info(f"Total de registros: {total_registros} | Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
-    st.write(f"**Valor Total:** {locale.currency(valor_total, grouping=True, symbol=True)}")
- 
