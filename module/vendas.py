@@ -96,31 +96,41 @@ def vendas(key_suffix):
     soma_metas = metas_no_periodo['Meta'].sum() if not metas_no_periodo.empty else 0
 
     # Mostrar informações das metas
+    titulo_meta = "" 
+
+    if opcoes["filtro_coluna"] and opcoes["filtro_coluna"] == "Todos":
+        titulo_meta = "Total de Vendas"
+    else:
+        titulo_meta = f"Vendas - {opcoes['filtro_coluna']}: {opcoes['filtro_valor']}" if opcoes["filtro_coluna"] and opcoes["filtro_valor"] else "Total de Vendas"
 
     if len(metas_no_periodo) == 0:
         st.warning("Nenhuma meta encontrada para o período selecionado.")
     else:
+        # Sempre criar 3 colunas
         col1, col2, col3 = st.columns(3)
         
+        # COLUNA 1 (sempre visível)
         with col1:
-            st.metric("Total de Vendas", 
-                    locale.currency(valor_total, 
-                    grouping=True, 
-                    symbol=True))
+            st.metric(titulo_meta, 
+                    locale.currency(valor_total, grouping=True, symbol=True))
         
-        with col2:
-            st.metric("Soma das Metas", 
-                    locale.currency(
-                        soma_metas, 
-                        grouping=True, 
-                        symbol=True))
-            
-    
-        with col3:
-            st.metric("Atingimento (%)", 
-                    f"{(valor_total / soma_metas * 100):.2f}%" 
-                    if soma_metas > 0 else "N/A")  
-
+        # COLUNAS 2 e 3 (condicionais)
+        if opcoes["filtro_coluna"] == "Todos":
+            with col2:
+                st.metric("Meta do Período", 
+                        locale.currency(soma_metas, grouping=True, symbol=True))
+            with col3:
+                if soma_metas > 0:
+                    percentual = (valor_total / soma_metas) * 100
+                    st.metric("Atingimento", f"{percentual:.1f}%")
+                else:
+                    st.metric("Atingimento", "N/A")
+        else:
+            # Esconder colunas 2 e 3 mantendo o layout
+            with col2:
+                st.empty()  # Coluna vazia
+            with col3:
+                st.empty()  # Coluna vazia
 
     # Set index para a data formatada
     df_display = df_display.set_index("Data de Emissão")
