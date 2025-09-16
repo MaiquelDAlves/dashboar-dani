@@ -15,6 +15,39 @@ data_planilha_vendas = tratar_dados(mostrar_planilha(planilha_vendas))
 data_planilha_metas = tratar_dados(mostrar_planilha(planilha_metas))
 
 def vendas(key_suffix):
+    # 🔽 COLOCAR O CSS AQUI (primeira coisa na função) 🔽
+    st.markdown("""
+    <style>
+    div[data-testid="stMetric"] {
+        border: 0.5px solid;
+        border-color: #dee2e6;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    [data-theme="dark"] div[data-testid="stMetric"] {
+        border-color: #4a5568;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    div[data-testid="stMetric"] > div {
+        text-align: center;
+    }
+
+    div[data-testid="stMetric"] > div:first-child {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    div[data-testid="stMetric"] > div:nth-child(2) {
+        font-weight: 700;
+        font-size: 24px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # PRIMEIRO: Apenas obter as datas (chamada única)
     datas_selecionadas = sidebar_datas(key_suffix)
     
@@ -60,12 +93,8 @@ def vendas(key_suffix):
     if "Data de Emissão" in df_display.columns:
         df_display["Data de Emissão"] = df_display["Data de Emissão"].dt.strftime("%d/%m/%Y")
 
-    # Mostrar estatísticas
-    total_registros = len(df_display)
-    valor_total = df_display["Valor Total"].sum() if "Valor Total" in df_display.columns else 0
-
-        # Mostrar estatísticas
-    total_registros = len(df_display)
+    # Mostrar estatísticas CARDS
+    
     valor_total = df_display["Valor Total"].sum() if "Valor Total" in df_display.columns else 0
 
     df_metas = data_planilha_metas.copy()
