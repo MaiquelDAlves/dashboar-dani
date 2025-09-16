@@ -50,13 +50,6 @@ def sidebar_datas(key_suffix="vendas"):
     else:
         data = range_inicial
 
-    # Verificar se temos pelo menos duas datas
-    if len(data) >= 2:
-        st.sidebar.write(f"Data selecionada: {data[0].strftime('%d/%m/%Y')} até {data[1].strftime('%d/%m/%Y')}")
-    else:
-        data = (min_value, max_value)
-        st.sidebar.write(f"Data selecionada: {data[0].strftime('%d/%m/%Y')} até {data[1].strftime('%d/%m/%Y')}")
-
     return data
 
 def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):

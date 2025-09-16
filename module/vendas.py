@@ -2,7 +2,7 @@
 
 import streamlit as st
 import locale
-from utils.google_sheets import planilha_vendas, mostrar_planilha
+from utils.google_sheets import planilha_metas, planilha_vendas, mostrar_planilha
 from utils.filtros import filtro_principal, tratar_dados
 from module.sidebar import sidebar_datas, sidebar_filtros
 import pandas as pd
@@ -12,6 +12,7 @@ locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
 # Carregar e tratar os dados da planilha de vendas
 data_planilha_vendas = tratar_dados(mostrar_planilha(planilha_vendas))
+data_planilha_metas = tratar_dados(mostrar_planilha(planilha_metas))
 
 def vendas(key_suffix):
     # PRIMEIRO: Apenas obter as datas (chamada única)
@@ -62,11 +63,65 @@ def vendas(key_suffix):
     # Mostrar estatísticas
     total_registros = len(df_display)
     valor_total = df_display["Valor Total"].sum() if "Valor Total" in df_display.columns else 0
+
+        # Mostrar estatísticas
+    total_registros = len(df_display)
+    valor_total = df_display["Valor Total"].sum() if "Valor Total" in df_display.columns else 0
+
+    df_metas = data_planilha_metas.copy()
+
+    # Converter a coluna de data para datetime
+    df_metas["Data"] = pd.to_datetime(df_metas["Data"], dayfirst=True, errors="coerce")
+
+    # CONVERSÃO CORRETA PARA FORMATO BRASILEIRO
+    if "Meta" in df_metas.columns:
+        df_metas["Meta"] = (
+            df_metas["Meta"]
+            .astype(str)
+            .str.strip()
+            .str.replace('R$', '', regex=False)
+            .str.replace(' ', '', regex=False)
+            .str.replace('.', '', regex=False)   # Remove separador de milhar
+            .str.replace(',', '.', regex=False)  # Converte vírgula decimal para ponto
+        )
+        df_metas["Meta"] = pd.to_numeric(df_metas["Meta"], errors='coerce').fillna(0)
+
+    # Criar a máscara para o período
+    mask_metas = (df_metas["Data"] >= data_inicio) & (df_metas["Data"] <= data_fim)
+
+    # Aplicar a máscara no DataFrame
+    metas_no_periodo = df_metas[mask_metas]
+
+    # Calcular soma das metas (agora convertidas para float)
+    soma_metas = metas_no_periodo['Meta'].sum() if not metas_no_periodo.empty else 0
+
+    # Mostrar informações das metas
+
+    if len(metas_no_periodo) == 0:
+        st.warning("Nenhuma meta encontrada para o período selecionado.")
+    else:
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total de Vendas", 
+                    locale.currency(valor_total, 
+                    grouping=True, 
+                    symbol=True))
+        
+        with col2:
+            st.metric("Soma das Metas", 
+                    locale.currency(
+                        soma_metas, 
+                        grouping=True, 
+                        symbol=True))
+            
     
-    st.info(f"Total de registros filtro: {total_registros} | Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
-    st.write(f"**Valor Total:** {locale.currency(valor_total, grouping=True, symbol=True)}")
-     
-    
+        with col3:
+            st.metric("Atingimento (%)", 
+                    f"{(valor_total / soma_metas * 100):.2f}%" 
+                    if soma_metas > 0 else "N/A")  
+
+
     # Set index para a data formatada
     df_display = df_display.set_index("Data de Emissão")
     
