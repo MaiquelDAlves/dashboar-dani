@@ -6,6 +6,7 @@ from utils.google_sheets import planilha_metas, planilha_vendas, mostrar_planilh
 from utils.filtros import filtro_principal, tratar_dados
 from module.sidebar import sidebar_datas, sidebar_filtros
 import pandas as pd
+import plotly.express as px
 
 # Configurar locale para moeda brasileira
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
@@ -116,7 +117,12 @@ def vendas(key_suffix):
         df_metas["Meta"] = pd.to_numeric(df_metas["Meta"], errors='coerce').fillna(0)
 
     # Criar a máscara para o período
-    mask_metas = (df_metas["Data"] >= data_inicio) & (df_metas["Data"] <= data_fim)
+    mask_metas = df_metas["Data"].apply(
+    lambda meta_date: (
+        data_inicio.year <= meta_date.year <= data_fim.year and
+        data_inicio.month <= meta_date.month <= data_fim.month
+    )
+)
 
     # Aplicar a máscara no DataFrame
     metas_no_periodo = df_metas[mask_metas]
@@ -126,7 +132,7 @@ def vendas(key_suffix):
 
     # Mostrar informações das metas
     titulo_meta = "" 
-
+    
     if opcoes["filtro_coluna"] and opcoes["filtro_coluna"] == "Todos":
         titulo_meta = "Total de Vendas"
     else:
@@ -139,31 +145,56 @@ def vendas(key_suffix):
         col1, col2, col3 = st.columns(3)
         
         # COLUNA 1 (sempre visível)
-        with col1:
-            st.metric(titulo_meta, 
-                    locale.currency(valor_total, grouping=True, symbol=True))
-        
-        # COLUNAS 2 e 3 (condicionais)
-        if opcoes["filtro_coluna"] == "Todos":
-            with col2:
-                st.metric("Meta do Período", 
-                        locale.currency(soma_metas, grouping=True, symbol=True))
-            with col3:
-                if soma_metas > 0:
-                    percentual = (valor_total / soma_metas) * 100
-                    st.metric("Atingimento", f"{percentual:.1f}%")
-                else:
-                    st.metric("Atingimento", "N/A")
+        if df_display.empty:
+            st.warning("Nenhum dado disponível para o período e filtros selecionados.")
+            return
         else:
-            # Esconder colunas 2 e 3 mantendo o layout
-            with col2:
-                st.empty()  # Coluna vazia
-            with col3:
-                st.empty()  # Coluna vazia
+            with col1:
+                st.metric(titulo_meta, 
+                        locale.currency(valor_total, grouping=True, symbol=True))
+            
+            # COLUNAS 2 e 3 (condicionais)
+            if opcoes["filtro_coluna"] == "Todos":
+                with col2:
+                    st.metric("Meta do Período", 
+                            locale.currency(soma_metas, grouping=True, symbol=True))
+                with col3:
+                    if soma_metas > 0:
+                        percentual = (valor_total / soma_metas) * 100
+                        st.metric("Atingimento", f"{percentual:.1f}%")
+                    else:
+                        st.metric("Atingimento", "N/A")
+            else:
+                # Esconder colunas 2 e 3 mantendo o layout
+                with col2:
+                    st.empty()  # Coluna vazia
+                with col3:
+                    st.empty()  # Coluna vazia
     st.divider()
     # Set index para a data formatada
     df_display = df_display.set_index("Data de Emissão")
     
+    # GRAFICOS (usar df com datetime)
+    df_grafico = df.copy()
+    df_grafico.set_index("Data de Emissão", inplace=True)
+    #Converte tada para DD/MM/AAAA
+    df_grafico['Data de Venda'] = df_grafico.index.date
+    df_vendas_diarias = df_grafico.groupby('Data de Venda').agg({'Valor Total': 'sum', 'Quantidade': 'sum'})
+    
+    if df_vendas_diarias.empty:
+        st.warning("Nenhum dado disponível para o gráfico no período selecionado.")
+        return
+    else:
+        st.plotly_chart(
+            px.bar(df_vendas_diarias, 
+                x=df_vendas_diarias.index, 
+                y='Valor Total', 
+                title='Vendas Diárias', 
+                labels={'Data de Venda': 'Data', 'Valor Total': 'Valor Total (R$)'}), 
+                use_container_width=True)
+    
+    st.divider()
+
     # Exibir dataframe com data formatada
     st.dataframe(
         df_display.style.format({

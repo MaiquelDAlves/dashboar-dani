@@ -4,22 +4,24 @@ import streamlit as st
 import pandas as pd
 from utils.google_sheets import planilha_vendas, planilha_sellout, planilha_metas, mostrar_planilha
 
+COLUNAS_ANALISE = [
+    'Empresa', 
+    'Data de Emissão',
+    'Quantidade', 
+    'Descrição',
+    'Matriz',
+    'Grupo de Produto', 
+    'Nro. Nota Fiscal',
+    'Valor Total'
+]
+
 # Carregar os dados das planilhas
 data_planilha_vendas = mostrar_planilha(planilha_vendas)
 
 # Função para aplicar filtros aos dados
 def filtro_principal(data):
     df = data[
-        [
-            'Empresa', 
-            'Data de Emissão',
-            'Quantidade', 
-            'Descrição',
-            'Matriz',
-            'Grupo de Produto', 
-            'Nro. Nota Fiscal',
-            'Valor Total'
-        ]
+      COLUNAS_ANALISE
     ]
     return df
 
