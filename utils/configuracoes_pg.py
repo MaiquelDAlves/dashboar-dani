@@ -1,3 +1,5 @@
+#configuracoes_pg.py
+
 import streamlit as st
 
 def configuracoes_pg():
