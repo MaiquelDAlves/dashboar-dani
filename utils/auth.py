@@ -1,5 +1,3 @@
-# utils/auth.py
-
 import streamlit as st
 import streamlit_authenticator as stauth
 import pandas as pd

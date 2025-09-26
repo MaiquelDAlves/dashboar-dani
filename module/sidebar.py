@@ -66,6 +66,7 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
     # Use dados filtrados se fornecidos, senão use dados completos
     dados_para_filtros = dados_filtrados_por_data if dados_filtrados_por_data is not None else data_planilha_vendas
 
+<<<<<<< HEAD
     # Verificar se temos dados para trabalhar
     if dados_para_filtros.empty:
         st.sidebar.warning("⚠️ Nenhum dado disponível para filtros")
@@ -77,18 +78,31 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
 
     # Colunas disponíveis para filtro (usando dados filtrados!)
     colunas_disponiveis = filtro_coluna(filtro_principal(dados_para_filtros))
+=======
+    # Colunas opcionais para o usuário selecionar (usando dados filtrados!)
+>>>>>>> parent of 20a0070 (Update sem multselect)
     colunas_opcoes = [
         c for c in colunas_disponiveis
         if c not in ["Valor Total", "Quantidade", "Data de Emissão"] and c in dados_para_filtros.columns
     ]
 
+<<<<<<< HEAD
     # COLUNAS FIXAS (sem multiselect)
     colunas_fixas = ["Data de Emissão"] + colunas_opcoes + ["Quantidade", "Valor Total"]
+=======
+    # Multiselect com key única
+    opcao_multiselect = st.sidebar.multiselect(
+        "Selecione as colunas para exibir:",
+        options=colunas_opcoes,
+        default=colunas_opcoes,
+        key=f"colunas_{key_suffix}"
+    )
+>>>>>>> parent of 20a0070 (Update sem multselect)
 
     # Selectbox para escolher a coluna de filtro
     opcao_selectbox_coluna = st.sidebar.selectbox(
         "Selecione a coluna para filtro:",
-        options=["Todos"] + colunas_opcoes,
+        options=["Todos"] + opcao_multiselect,
         key=f"select_{key_suffix}"
     )
 
@@ -105,8 +119,15 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
             key=f"valor_{key_suffix}"
         )
 
+    # Colunas fixas sempre presentes
+    colunas_finais = ["Data de Emissão"] + opcao_multiselect + ["Quantidade", "Valor Total"]
+
     return {
+<<<<<<< HEAD
         "colunas": colunas_fixas,
+=======
+        "colunas": colunas_finais,
+>>>>>>> parent of 20a0070 (Update sem multselect)
         "filtro_coluna": opcao_selectbox_coluna,
         "filtro_valor": opcao_selectbox_valor,
     }

@@ -85,6 +85,17 @@ def vendas(key_suffix):
     # SEGUNDO: Obter os outros filtros (com dados já filtrados por data)
     opcoes = sidebar_filtros(key_suffix, dados_filtrados_por_data)
     
+<<<<<<< HEAD
+=======
+    # Separar colunas opcionais do usuário das fixas
+    colunas_fixas = {"Data de Emissão", "Quantidade", "Valor Total"}
+    colunas_usuario = [c for c in opcoes["colunas"] if c not in colunas_fixas]
+
+    if not colunas_usuario:
+        st.warning("Por favor, selecione pelo menos uma coluna opcional para exibir.")
+        return
+
+>>>>>>> parent of 20a0070 (Update sem multselect)
     # Montar dataframe final (mantendo datetime para operações)
     df = dados_completos[mask_data][opcoes["colunas"]]
     
@@ -190,14 +201,12 @@ def vendas(key_suffix):
     # Converte data para DD/MM/AAAA
     df_grafico['Data de Venda'] = df_grafico.index.date
     df_vendas_diarias = df_grafico.groupby('Data de Venda').agg({'Valor Total': 'sum', 'Quantidade': 'sum'})
-    df_descricao = df_grafico.groupby('Descrição').agg({'Valor Total': 'sum', 'Quantidade': 'sum'}).reset_index()
-    df_matriz = df_grafico.groupby('Matriz').agg({'Valor Total': 'sum', 'Quantidade': 'sum'}).reset_index()
     
     if df_vendas_diarias.empty:
         st.warning("Nenhum dado disponível para o gráfico no período selecionado.")
         return
     else:
-        cols1, cols2 = st.columns(2)
+        cols1, cols2 = st.columns([2, 1])
         with cols1: 
             st.plotly_chart(
                 px.bar(df_vendas_diarias, 
@@ -209,60 +218,15 @@ def vendas(key_suffix):
         with cols2:
             st.plotly_chart(
                 px.pie(
-                    df_matriz, 
+                    df_grafico, 
                     names='Matriz', 
                     values='Valor Total',
                     title='Vendas por Matriz'
                 ),
                 use_container_width=True
             )
-        st.divider()
-        cols3, cols4 = st.columns(2)
-        with cols3:
-            st.plotly_chart(
-                px.bar(df_descricao,
-                    x=df_descricao['Descrição'],
-                    y='Quantidade',
-                    title='Quantidade Vendida por Produto',
-                    labels={'Descrição': 'Produto', 'Quantidade': 'Quantidade Vendida'},
-                    color='Quantidade',
-                    color_continuous_scale='Blues'
-                )
-            )
-        with cols4:
-            st.plotly_chart(
-                px.pie(
-                    df_descricao, 
-                    names='Descrição', 
-                    values='Quantidade',
-                    title='Quantidade Vendida por Produto'
-                ),
-                use_container_width=True
-            )
-        st.divider()
-        cols5, cols6 = st.columns(2)
-        with cols5:
-            st.plotly_chart(
-                px.bar(df_descricao,
-                    x=df_descricao['Descrição'],
-                    y='Valor Total',
-                    title='Valor Total Vendido por Produto',
-                    labels={'Descrição': 'Produto', 'Valor Total': 'Valor Total (R$)'},
-                    color='Valor Total',
-                    color_continuous_scale='Greens'   
-                ),
-                use_container_width=True
-            )
-        with cols6:
-            st.plotly_chart(
-                px.pie(
-                    df_descricao, 
-                    names='Descrição', 
-                    values='Valor Total',
-                    title='Valor Total Vendido por Produto'
-                ),
-                use_container_width=True
-            )
+                   
+
     st.divider()
 
     # Exibir dataframe com data formatada
@@ -271,3 +235,5 @@ def vendas(key_suffix):
             "Valor Total": lambda x: locale.currency(x, grouping=True, symbol=True)
         })
     )
+    
+    
