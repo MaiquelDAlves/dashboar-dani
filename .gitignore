@@ -11,3 +11,5 @@ __pycache__/
 # Cache do Streamlit
 .streamlit/
 
+# Ambientes virtuais
+venv/
