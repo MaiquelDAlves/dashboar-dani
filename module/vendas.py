@@ -185,14 +185,27 @@ def vendas(key_suffix):
         st.warning("Nenhum dado disponível para o gráfico no período selecionado.")
         return
     else:
-        st.plotly_chart(
-            px.bar(df_vendas_diarias, 
-                x=df_vendas_diarias.index, 
-                y='Valor Total', 
-                title='Vendas Diárias', 
-                labels={'Data de Venda': 'Data', 'Valor Total': 'Valor Total (R$)'}), 
-                use_container_width=True)
-    
+        cols1, cols2 = st.columns([2, 1])
+        with cols1: 
+            st.plotly_chart(
+                px.bar(df_vendas_diarias, 
+                    x=df_vendas_diarias.index, 
+                    y='Valor Total', 
+                    title='Vendas Diárias', 
+                    labels={'Data de Venda': 'Data', 'Valor Total': 'Valor Total (R$)'}), 
+                    use_container_width=True)
+        with cols2:
+            st.plotly_chart(
+                px.pie(
+                    df_grafico, 
+                    names='Matriz', 
+                    values='Valor Total',
+                    title='Vendas por Matriz'
+                ),
+                use_container_width=True
+            )
+                   
+
     st.divider()
 
     # Exibir dataframe com data formatada
