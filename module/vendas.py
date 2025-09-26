@@ -16,7 +16,7 @@ data_planilha_vendas = tratar_dados(mostrar_planilha(planilha_vendas))
 data_planilha_metas = tratar_dados(mostrar_planilha(planilha_metas))
 
 def vendas(key_suffix):
-    # 🔽 COLOCAR O CSS AQUI (primeira coisa na função) 🔽
+    # CSS para os cards
     st.markdown("""
     <style>
     div[data-testid="stMetric"] {
@@ -67,9 +67,6 @@ def vendas(key_suffix):
     # SEGUNDO: Obter os outros filtros (com dados já filtrados por data)
     opcoes = sidebar_filtros(key_suffix, dados_filtrados_por_data)
     
-    # REMOVIDO: Verificação de colunas opcionais (agora são fixas)
-    # As colunas já vêm fixas do sidebar_filtros
-
     # Montar dataframe final (mantendo datetime para operações)
     df = dados_completos[mask_data][opcoes["colunas"]]
     
@@ -90,7 +87,6 @@ def vendas(key_suffix):
         df_display["Data de Emissão"] = df_display["Data de Emissão"].dt.strftime("%d/%m/%Y")
 
     # Mostrar estatísticas CARDS
-    
     valor_total = df_display["Valor Total"].sum() if "Valor Total" in df_display.columns else 0
 
     df_metas = data_planilha_metas.copy()
@@ -166,13 +162,14 @@ def vendas(key_suffix):
                 with col3:
                     st.empty()  # Coluna vazia
     st.divider()
+    
     # Set index para a data formatada
     df_display = df_display.set_index("Data de Emissão")
     
     # GRAFICOS (usar df com datetime)
     df_grafico = df.copy()
     df_grafico.set_index("Data de Emissão", inplace=True)
-    #Converte tada para DD/MM/AAAA
+    # Converte data para DD/MM/AAAA
     df_grafico['Data de Venda'] = df_grafico.index.date
     df_vendas_diarias = df_grafico.groupby('Data de Venda').agg({'Valor Total': 'sum', 'Quantidade': 'sum'})
     df_descricao = df_grafico.groupby('Descrição').agg({'Valor Total': 'sum', 'Quantidade': 'sum'}).reset_index()

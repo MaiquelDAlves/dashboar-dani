@@ -3,27 +3,52 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
-from dotenv import load_dotenv
 import os
 
-#Utilizando .env para pegar o ID da planilha
-load_dotenv()
-planilha_id = os.getenv("GOOGLE_SHEETS_ID")
-
-
-file_name = "credentials.json"
+# Escopos do Google
 scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_name(
-    filename=file_name,
-    scopes=scopes
-)
-client = gspread.authorize(creds)
+def get_google_sheets_config():
+    """Obtém configuração de forma segura para ambos os ambientes"""
+    try:
+        # Tenta importar streamlit e verificar secrets (apenas se estiver em execução)
+        import streamlit as st
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        
+        # Só tenta usar st.secrets se estiver em uma sessão do Streamlit
+        if get_script_run_ctx() is not None:
+            try:
+                if hasattr(st, 'secrets') and st.secrets:
+                    planilha_id = st.secrets.get('GOOGLE_SHEETS_ID')
+                    if planilha_id:
+                        if 'google_credentials' in st.secrets:
+                            creds_info = dict(st.secrets['google_credentials'])
+                            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_info, scopes=scopes)
+                            return planilha_id, creds, "streamlit_secrets"
+            except:
+                pass
+    except:
+        pass
+    
+    # Fallback para local
+    from dotenv import load_dotenv
+    load_dotenv()
+    planilha_id = os.getenv("GOOGLE_SHEETS_ID")
+    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scopes=scopes)
+    return planilha_id, creds, "local"
 
-# Abrir planilha completa pelo ID
+# Carrega configurações
+planilha_id, creds, source = get_google_sheets_config()
+
+if not planilha_id or not creds:
+    raise ValueError("Não foi possível carregar as configurações do Google Sheets")
+
+print(f"✅ Configurações carregadas de: {source}")
+
+client = gspread.authorize(creds)
 planilha_completa = client.open_by_key(planilha_id)
 
 # Seleciona as abas da planilha

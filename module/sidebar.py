@@ -34,7 +34,7 @@ def sidebar_datas(key_suffix="vendas"):
         min_value=min_value,
         max_value=max_value,
         format="DD/MM/YYYY",
-        key=f"date_input_{key_suffix}"  # KEY ÚNICA AQUI!
+        key=f"date_input_{key_suffix}"
     )
 
     # Garantir que 'data' seja sempre tupla de duas datas
@@ -64,8 +64,7 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
         if c not in ["Valor Total", "Quantidade", "Data de Emissão"]
     ]
 
-    # REMOVIDO: Multiselect para seleção de colunas
-    # AGORA: Usar todas as colunas disponíveis (fixas)
+    # COLUNAS FIXAS (sem multiselect)
     colunas_fixas = ["Data de Emissão"] + colunas_opcoes + ["Quantidade", "Valor Total"]
 
     # Selectbox para escolher a coluna de filtro
