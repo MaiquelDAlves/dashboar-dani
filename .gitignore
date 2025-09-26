@@ -1,0 +1,13 @@
+# Arquivos sensíveis
+.env
+credentials.json
+
+# Ambientes virtuais
+venv/
+.env/
+*.pyc
+__pycache__/
+
+# Cache do Streamlit
+.streamlit/
+
