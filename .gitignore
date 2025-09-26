@@ -13,3 +13,6 @@ __pycache__/
 
 # Ambientes virtuais
 venv/
+
+# Cache do Streamlit
+.streamlit/secrets.toml
