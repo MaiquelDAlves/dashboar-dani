@@ -1,3 +1,5 @@
+# utils/auth.py
+
 import streamlit as st
 import streamlit_authenticator as stauth
 from utils.google_sheets import planilha_usuarios, mostrar_planilha

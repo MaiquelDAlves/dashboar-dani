@@ -58,24 +58,20 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
     # Use dados filtrados se fornecidos, senão use dados completos
     dados_para_filtros = dados_filtrados_por_data if dados_filtrados_por_data is not None else data_planilha_vendas
 
-    # Colunas opcionais para o usuário selecionar (usando dados filtrados!)
+    # Colunas disponíveis para filtro (usando dados filtrados!)
     colunas_opcoes = [
         c for c in filtro_coluna(filtro_principal(dados_para_filtros))
         if c not in ["Valor Total", "Quantidade", "Data de Emissão"]
     ]
 
-    # Multiselect com key única
-    opcao_multiselect = st.sidebar.multiselect(
-        "Selecione as colunas para exibir:",
-        options=colunas_opcoes,
-        default=colunas_opcoes,
-        key=f"colunas_{key_suffix}"
-    )
+    # REMOVIDO: Multiselect para seleção de colunas
+    # AGORA: Usar todas as colunas disponíveis (fixas)
+    colunas_fixas = ["Data de Emissão"] + colunas_opcoes + ["Quantidade", "Valor Total"]
 
     # Selectbox para escolher a coluna de filtro
     opcao_selectbox_coluna = st.sidebar.selectbox(
         "Selecione a coluna para filtro:",
-        options=["Todos"] + opcao_multiselect,
+        options=["Todos"] + colunas_opcoes,
         key=f"select_{key_suffix}"
     )
 
@@ -92,11 +88,8 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
             key=f"valor_{key_suffix}"
         )
 
-    # Colunas fixas sempre presentes
-    colunas_finais = ["Data de Emissão"] + opcao_multiselect + ["Quantidade", "Valor Total"]
-
     return {
-        "colunas": colunas_finais,
+        "colunas": colunas_fixas,  # Colunas fixas em vez de dinâmicas
         "filtro_coluna": opcao_selectbox_coluna,
         "filtro_valor": opcao_selectbox_valor,
     }
