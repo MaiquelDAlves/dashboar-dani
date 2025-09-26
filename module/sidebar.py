@@ -13,6 +13,14 @@ def sidebar_datas(key_suffix="vendas"):
     """Apenas para selecionar datas - chamada uma vez"""
     st.sidebar.title("Dashboard Dani")
 
+    # Verificar se a planilha tem dados e a coluna necessária
+    if data_planilha_vendas.empty or "Data de Emissão" not in data_planilha_vendas.columns:
+        st.sidebar.error("❌ Dados não disponíveis ou coluna 'Data de Emissão' não encontrada")
+        # Retorna datas padrão como fallback
+        hoje = datetime.date.today()
+        inicio_mes = datetime.date(hoje.year, hoje.month, 1)
+        return (inicio_mes, hoje)
+
     # Garantir que "Data de Emissão" seja datetime
     data_planilha_vendas["Data de Emissão"] = pd.to_datetime(
         data_planilha_vendas["Data de Emissão"],
@@ -58,10 +66,20 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
     # Use dados filtrados se fornecidos, senão use dados completos
     dados_para_filtros = dados_filtrados_por_data if dados_filtrados_por_data is not None else data_planilha_vendas
 
+    # Verificar se temos dados para trabalhar
+    if dados_para_filtros.empty:
+        st.sidebar.warning("⚠️ Nenhum dado disponível para filtros")
+        return {
+            "colunas": ["Data de Emissão", "Quantidade", "Valor Total"],
+            "filtro_coluna": "Todos",
+            "filtro_valor": "Todos"
+        }
+
     # Colunas disponíveis para filtro (usando dados filtrados!)
+    colunas_disponiveis = filtro_coluna(filtro_principal(dados_para_filtros))
     colunas_opcoes = [
-        c for c in filtro_coluna(filtro_principal(dados_para_filtros))
-        if c not in ["Valor Total", "Quantidade", "Data de Emissão"]
+        c for c in colunas_disponiveis
+        if c not in ["Valor Total", "Quantidade", "Data de Emissão"] and c in dados_para_filtros.columns
     ]
 
     # COLUNAS FIXAS (sem multiselect)
@@ -78,7 +96,7 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
     opcao_selectbox_valor = "Todos"  # Valor padrão
     
     # Só mostra selectbox de valor se uma coluna específica for selecionada
-    if opcao_selectbox_coluna and opcao_selectbox_coluna != "Todos":
+    if opcao_selectbox_coluna and opcao_selectbox_coluna != "Todos" and opcao_selectbox_coluna in dados_para_filtros.columns:
         # Ordenar valores únicos para melhor visualização
         valores_unicos = sorted(dados_para_filtros[opcao_selectbox_coluna].dropna().unique())
         opcao_selectbox_valor = st.sidebar.selectbox(
@@ -88,7 +106,7 @@ def sidebar_filtros(key_suffix="vendas", dados_filtrados_por_data=None):
         )
 
     return {
-        "colunas": colunas_fixas,  # Colunas fixas em vez de dinâmicas
+        "colunas": colunas_fixas,
         "filtro_coluna": opcao_selectbox_coluna,
         "filtro_valor": opcao_selectbox_valor,
     }

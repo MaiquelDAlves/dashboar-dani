@@ -39,7 +39,7 @@ def init_google_sheets():
         load_dotenv()
         planilha_id = os.getenv("GOOGLE_SHEETS_ID")
         
-        if planilha_id:
+        if planilha_id and os.path.exists("credentials.json"):
             creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scopes=scopes)
             client = gspread.authorize(creds)
             planilha_completa = client.open_by_key(planilha_id)
@@ -53,20 +53,26 @@ def init_google_sheets():
             }
     
     except Exception as e:
-        print(f"❌ Erro ao inicializar Google Sheets: {e}")
+        st.error(f"❌ Erro ao conectar com Google Sheets: {str(e)}")
     
     return None
 
 # Inicializa as conexões
 sheets_connection = init_google_sheets()
 
-# Define as variáveis globais
-if sheets_connection:
-    planilha_vendas = sheets_connection['vendas']
-    planilha_sellout = sheets_connection['sellout']
-    planilha_metas = sheets_connection['metas']
-    planilha_usuarios = sheets_connection['usuarios']
-else:
+# Define as variáveis globais com fallback
+try:
+    if sheets_connection:
+        planilha_vendas = sheets_connection['vendas']
+        planilha_sellout = sheets_connection['sellout']
+        planilha_metas = sheets_connection['metas']
+        planilha_usuarios = sheets_connection['usuarios']
+    else:
+        planilha_vendas = None
+        planilha_sellout = None
+        planilha_metas = None
+        planilha_usuarios = None
+except:
     planilha_vendas = None
     planilha_sellout = None
     planilha_metas = None
@@ -75,7 +81,6 @@ else:
 def mostrar_planilha(planilha):
     """Carrega dados da planilha com tratamento de erro"""
     if planilha is None:
-        st.error("❌ Conexão com Google Sheets não disponível")
         return pd.DataFrame()
     
     try:

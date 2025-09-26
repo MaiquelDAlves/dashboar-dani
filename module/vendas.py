@@ -58,6 +58,15 @@ def vendas(key_suffix):
     </style>
     """, unsafe_allow_html=True)
     
+    # VERIFICAR SE HÁ DADOS DISPONÍVEIS
+    if data_planilha_vendas.empty:
+        st.error("❌ Nenhum dado disponível na planilha de vendas")
+        return
+        
+    if "Data de Emissão" not in data_planilha_vendas.columns:
+        st.error("❌ Coluna 'Data de Emissão' não encontrada nos dados")
+        return
+    
     # PRIMEIRO: Apenas obter as datas (chamada única)
     datas_selecionadas = sidebar_datas(key_suffix)
     
