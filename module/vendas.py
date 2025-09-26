@@ -8,8 +8,17 @@ from module.sidebar import sidebar_datas, sidebar_filtros
 import pandas as pd
 import plotly.express as px
 
-# Configurar locale para moeda brasileira
-locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
+# Configurar locale para moeda brasileira - COM FALLBACK
+try:
+    locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
+except locale.Error:
+    try:
+        # Fallback para locale alternativo
+        locale.setlocale(locale.LC_ALL, "Portuguese_Brazil.1252")
+    except:
+        # Fallback final - usa locale padrão do sistema
+        locale.setlocale(locale.LC_ALL, "")
+        st.warning("Locale pt_BR não disponível. Usando configuração padrão.")
 
 # Carregar e tratar os dados da planilha de vendas
 data_planilha_vendas = tratar_dados(mostrar_planilha(planilha_vendas))

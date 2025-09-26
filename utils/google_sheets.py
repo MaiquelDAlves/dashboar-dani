@@ -12,53 +12,68 @@ scopes = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-def get_google_config():
-    """Carrega configurações do Streamlit Secrets"""
+def init_google_sheets():
+    """Inicializa a conexão com Google Sheets de forma segura"""
     try:
-        # Verifica se os secrets existem
-        if not hasattr(st, 'secrets') or not st.secrets:
-            raise ValueError("Secrets não disponíveis")
+        # Verifica se está no Streamlit Cloud (com secrets)
+        if hasattr(st, 'secrets') and st.secrets:
+            # Tenta carregar do Streamlit Secrets
+            if 'GOOGLE_SHEETS_ID' in st.secrets and 'google_credentials' in st.secrets:
+                planilha_id = st.secrets['GOOGLE_SHEETS_ID']
+                creds_info = dict(st.secrets['google_credentials'])
+                
+                creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_info, scopes=scopes)
+                client = gspread.authorize(creds)
+                planilha_completa = client.open_by_key(planilha_id)
+                
+                return {
+                    'vendas': planilha_completa.get_worksheet(0),
+                    'sellout': planilha_completa.get_worksheet(1),
+                    'metas': planilha_completa.get_worksheet(2),
+                    'usuarios': planilha_completa.get_worksheet(3),
+                    'client': client
+                }
         
-        # Obtém o ID da planilha
-        planilha_id = st.secrets.get("GOOGLE_SHEETS_ID")
-        if not planilha_id:
-            raise ValueError("GOOGLE_SHEETS_ID não encontrado nos secrets")
+        # Fallback para ambiente local
+        from dotenv import load_dotenv
+        load_dotenv()
+        planilha_id = os.getenv("GOOGLE_SHEETS_ID")
         
-        # Obtém as credenciais
-        if "google_credentials" not in st.secrets:
-            raise ValueError("google_credentials não encontrado nos secrets")
-        
-        creds_info = dict(st.secrets["google_credentials"])
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_info, scopes=scopes)
-        
-        return planilha_id, creds
-        
+        if planilha_id:
+            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scopes=scopes)
+            client = gspread.authorize(creds)
+            planilha_completa = client.open_by_key(planilha_id)
+            
+            return {
+                'vendas': planilha_completa.get_worksheet(0),
+                'sellout': planilha_completa.get_worksheet(1),
+                'metas': planilha_completa.get_worksheet(2),
+                'usuarios': planilha_completa.get_worksheet(3),
+                'client': client
+            }
+    
     except Exception as e:
-        st.error(f"❌ Erro ao carregar configurações: {e}")
-        raise
+        print(f"❌ Erro ao inicializar Google Sheets: {e}")
+    
+    return None
 
-# Inicializa as variáveis globais
-try:
-    planilha_id, creds = get_google_config()
-    client = gspread.authorize(creds)
-    planilha_completa = client.open_by_key(planilha_id)
-    
-    # Seleciona as abas da planilha
-    planilha_vendas = planilha_completa.get_worksheet(0)
-    planilha_sellout = planilha_completa.get_worksheet(1)
-    planilha_metas = planilha_completa.get_worksheet(2)
-    planilha_usuarios = planilha_completa.get_worksheet(3)
-    
-except Exception as e:
-    # Define como None para evitar erros de importação
+# Inicializa as conexões
+sheets_connection = init_google_sheets()
+
+# Define as variáveis globais
+if sheets_connection:
+    planilha_vendas = sheets_connection['vendas']
+    planilha_sellout = sheets_connection['sellout']
+    planilha_metas = sheets_connection['metas']
+    planilha_usuarios = sheets_connection['usuarios']
+else:
     planilha_vendas = None
     planilha_sellout = None
     planilha_metas = None
     planilha_usuarios = None
-    print(f"⚠️ Aviso: Google Sheets não inicializado - {e}")
 
 def mostrar_planilha(planilha):
-    """Carrega dados da planilha"""
+    """Carrega dados da planilha com tratamento de erro"""
     if planilha is None:
         st.error("❌ Conexão com Google Sheets não disponível")
         return pd.DataFrame()
