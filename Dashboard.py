@@ -115,7 +115,7 @@ if "filtro_df_metas_base" not in st.session_state:
 filtro_df_metas = st.session_state["filtro_df_metas_base"].copy()
 
 # ---------------------------
-# SIDEBAR - FILTROS DE DATA (APLICAM À PRIMEIRA ABA)
+# SIDEBAR - FILTROS (APLICAM À PRIMEIRA ABA)
 # ---------------------------
 mes_recente = filtro_df_vendas.index.max().to_period("M")
 primeiro_dia = mes_recente.start_time.date()
@@ -124,17 +124,32 @@ ultimo_dia = mes_recente.end_time.date()
 with st.sidebar:
     st.divider()
     st.subheader("Filtros Período")
+    
+    # Filtro de datas
     dt_inicio = st.date_input("Data Início:", value=primeiro_dia, format="DD/MM/YYYY")
     dt_fim = st.date_input("Data Fim:", value=ultimo_dia, format="DD/MM/YYYY")
+    
+    # NOVO: Filtro de matriz/loja
+    matrizes_disponiveis = ['Todas'] + sorted(filtro_df_vendas['Matriz'].dropna().unique().tolist())
+    matriz_selecionada = st.selectbox(
+        "Selecione a Matriz:",
+        options=matrizes_disponiveis,
+        index=0
+    )
 
 # Converte para Timestamp para filtro correto no DataFrame
 dt_inicio_ts = pd.Timestamp(dt_inicio)
 dt_fim_ts = pd.Timestamp(dt_fim)
 
 # ---------------------------
-# FILTRAGEM DOS DADOS POR PERÍODO SELECIONADO
+# FILTRAGEM DOS DADOS POR PERÍODO E MATRIZ SELECIONADA
 # ---------------------------
+# Filtra primeiro por data
 df_vendas_filtrado = filtro_df_vendas.loc[dt_inicio_ts:dt_fim_ts]
+
+# Aplica filtro de matriz se não for "Todas"
+if matriz_selecionada != 'Todas':
+    df_vendas_filtrado = df_vendas_filtrado[df_vendas_filtrado['Matriz'] == matriz_selecionada]
 
 filtro_df_metas_filtrado = filtro_df_metas[
     (filtro_df_metas["Data"].dt.to_period("M") >= dt_inicio_ts.to_period("M")) &
@@ -176,15 +191,10 @@ vendas_mensais_matriz.columns = ['Mês', 'Matriz', 'Venda Mensal']
 vendas_mensais_matriz['Mês'] = vendas_mensais_matriz['Mês'].dt.to_period('M').dt.to_timestamp()
 vendas_mensais_matriz['Mês Formatado'] = vendas_mensais_matriz['Mês'].dt.strftime('%b/%Y')
 
-# Agrupa por mês e produto (top 5 produtos por mês)
-vendas_mensais_produto = filtro_df_vendas.groupby([pd.Grouper(freq='M'), 'Descrição'])['Valor Total'].sum().reset_index()
-vendas_mensais_produto.columns = ['Mês', 'Produto', 'Venda Mensal']
-vendas_mensais_produto['Mês'] = vendas_mensais_produto['Mês'].dt.to_period('M').dt.to_timestamp()
-
-# Encontra os top 5 produtos por mês
-top_produtos_por_mes = vendas_mensais_produto.groupby('Mês').apply(
-    lambda x: x.nlargest(5, 'Venda Mensal')
-).reset_index(drop=True)
+# Dados anuais para tabela
+vendas_anuais = filtro_df_vendas.groupby(filtro_df_vendas.index.year)['Valor Total'].sum().reset_index()
+vendas_anuais.columns = ['Ano', 'Venda Anual']
+vendas_anuais = vendas_anuais.sort_values('Ano', ascending=False)
 
 # ---------------------------
 # CÁLCULO DE MÉTRICAS
@@ -207,6 +217,8 @@ with tab1:
     # ABA 1: VENDAS POR PERÍODO
     # ---------------------------
     st.subheader(f"📅 Análise do Período: {dt_inicio.strftime('%d/%m/%Y')} a {dt_fim.strftime('%d/%m/%Y')}")
+    if matriz_selecionada != 'Todas':
+        st.subheader(f"🏢 Matriz Selecionada: {matriz_selecionada}")
     
     # Métricas principais
     col1, col2, col3 = st.columns(3)
@@ -217,17 +229,63 @@ with tab1:
     with col3:
         st.metric("% Atingido", percentual_formatado)
 
-    # GRÁFICOS - MATRIZ
-    st.subheader("🏢 Análise por Matriz")
-    col1, col2 = st.columns(2)
+    # GRÁFICOS - MATRIZ (só mostra se não tiver matriz selecionada)
+    if matriz_selecionada == 'Todas':
+        st.subheader("🏢 Análise por Matriz")
+        col1, col2 = st.columns(2)
 
-    with col1:
+        with col1:
+            if not vendas_diarias.empty:
+                fig_barras = px.bar(
+                    vendas_diarias, 
+                    x='Data', 
+                    y='Venda Diária',
+                    title='<b>💰 Vendas Diárias</b>',
+                    color='Venda Diária',
+                    color_continuous_scale='viridis',
+                    template='plotly_white'
+                )
+                fig_barras.update_layout(
+                    xaxis=dict(tickformat='%d/%m', title='Data'),
+                    yaxis=dict(title='Valor em R$'),
+                    hovermode='x unified',
+                    showlegend=False
+                )
+                fig_barras.update_traces(
+                    hovertemplate='<b>Data:</b> %{x|%d/%m/%Y}<br><b>Venda:</b> R$ %{y:,.2f}<extra></extra>'
+                )
+                st.plotly_chart(fig_barras, use_container_width=True)
+            else:
+                st.info("📊 Não há dados de vendas para o período selecionado")
+
+        with col2:
+            if not vendas_por_matriz.empty and len(vendas_por_matriz) > 1:
+                fig_pizza = px.pie(
+                    vendas_por_matriz,
+                    values='Valor Total',
+                    names='Matriz',
+                    title='<b>🏢 Participação por Matriz</b>',
+                    color_discrete_sequence=px.colors.qualitative.Set3,
+                    hole=0.4,
+                    template='plotly_white'
+                )
+                fig_pizza.update_traces(
+                    textposition='inside',
+                    textinfo='percent+label',
+                    hovertemplate='<b>%{label}</b><br>Participação: %{percent}<br>Valor: R$ %{value:,.2f}<extra></extra>'
+                )
+                st.plotly_chart(fig_pizza, use_container_width=True)
+            else:
+                st.info("🏢 Não há dados suficientes de matriz")
+    else:
+        # Se tem matriz selecionada, mostra apenas gráfico de vendas diárias
+        st.subheader("💰 Vendas Diárias da Matriz")
         if not vendas_diarias.empty:
             fig_barras = px.bar(
                 vendas_diarias, 
                 x='Data', 
                 y='Venda Diária',
-                title='<b>💰 Vendas Diárias</b>',
+                title=f'<b>💰 Vendas Diárias - {matriz_selecionada}</b>',
                 color='Venda Diária',
                 color_continuous_scale='viridis',
                 template='plotly_white'
@@ -238,32 +296,7 @@ with tab1:
                 hovermode='x unified',
                 showlegend=False
             )
-            fig_barras.update_traces(
-                hovertemplate='<b>Data:</b> %{x|%d/%m/%Y}<br><b>Venda:</b> R$ %{y:,.2f}<extra></extra>'
-            )
             st.plotly_chart(fig_barras, use_container_width=True)
-        else:
-            st.info("📊 Não há dados de vendas para o período selecionado")
-
-    with col2:
-        if not vendas_por_matriz.empty and len(vendas_por_matriz) > 1:
-            fig_pizza = px.pie(
-                vendas_por_matriz,
-                values='Valor Total',
-                names='Matriz',
-                title='<b>🏢 Participação por Matriz</b>',
-                color_discrete_sequence=px.colors.qualitative.Set3,
-                hole=0.4,
-                template='plotly_white'
-            )
-            fig_pizza.update_traces(
-                textposition='inside',
-                textinfo='percent+label',
-                hovertemplate='<b>%{label}</b><br>Participação: %{percent}<br>Valor: R$ %{value:,.2f}<extra></extra>'
-            )
-            st.plotly_chart(fig_pizza, use_container_width=True)
-        else:
-            st.info("🏢 Não há dados suficientes de matriz")
 
     # GRÁFICOS - PRODUTOS POR QUANTIDADE
     st.subheader("📦 Análise de Produtos por Quantidade")
@@ -373,50 +406,30 @@ with tab1:
 
 with tab2:
     # ---------------------------
-    # ABA 2: ANÁLISE MENSAL
+    # ABA 2: ANÁLISE MENSAL SIMPLIFICADA
     # ---------------------------
     st.subheader("📊 Evolução Mensal de Vendas")
     
-    # Métricas mensais
-    ultimo_mes = vendas_mensais.iloc[-1] if not vendas_mensais.empty else None
-    penultimo_mes = vendas_mensais.iloc[-2] if len(vendas_mensais) > 1 else None
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        if not vendas_mensais.empty:
-            valor_atual = vendas_mensais['Venda Mensal'].iloc[-1]
-            valor_anterior = vendas_mensais['Venda Mensal'].iloc[-2] if len(vendas_mensais) > 1 else 0
-            variacao = ((valor_atual - valor_anterior) / valor_anterior * 100) if valor_anterior > 0 else 0
+    # Métricas mensais simplificadas (removidas as que você não gostou)
+    if not vendas_mensais.empty:
+        ultimo_mes_valor = vendas_mensais['Venda Mensal'].iloc[-1]
+        penultimo_mes_valor = vendas_mensais['Venda Mensal'].iloc[-2] if len(vendas_mensais) > 1 else 0
+        variacao_mensal = ((ultimo_mes_valor - penultimo_mes_valor) / penultimo_mes_valor * 100) if penultimo_mes_valor > 0 else 0
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
             st.metric(
                 f"Vendas {vendas_mensais['Mês Formatado'].iloc[-1]}",
-                f"R$ {valor_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                f"{variacao:+.1f}%"
+                f"R$ {ultimo_mes_valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                f"{variacao_mensal:+.1f}%"
             )
-    
-    with col2:
-        if len(vendas_mensais) > 1:
+        
+        with col2:
             media_mensal = vendas_mensais['Venda Mensal'].mean()
             st.metric(
                 "Média Mensal",
                 f"R$ {media_mensal:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            )
-    
-    with col3:
-        if not vendas_mensais.empty:
-            total_anual = vendas_mensais['Venda Mensal'].sum()
-            st.metric(
-                "Total Anual",
-                f"R$ {total_anual:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            )
-    
-    with col4:
-        if len(vendas_mensais) > 1:
-            crescimento_anual = ((vendas_mensais['Venda Mensal'].iloc[-1] - vendas_mensais['Venda Mensal'].iloc[0]) / 
-                               vendas_mensais['Venda Mensal'].iloc[0] * 100) if vendas_mensais['Venda Mensal'].iloc[0] > 0 else 0
-            st.metric(
-                "Crescimento Anual",
-                f"{crescimento_anual:+.1f}%"
             )
 
     # GRÁFICO DE LINHA - EVOLUÇÃO MENSAL
@@ -468,62 +481,41 @@ with tab2:
         
         st.plotly_chart(fig_barras_matriz, use_container_width=True)
 
-    # GRÁFICO DE ÁREA - TOP PRODUTOS POR MÊS
-    st.subheader("📦 Evolução dos Top Produtos")
-    if not top_produtos_por_mes.empty:
-        # Pivot para formato wide
-        pivot_produtos = top_produtos_por_mes.pivot_table(
-            index='Mês', 
-            columns='Produto', 
-            values='Venda Mensal',
-            aggfunc='sum'
-        ).fillna(0)
-        
-        pivot_produtos_reset = pivot_produtos.reset_index()
-        pivot_produtos_reset['Mês'] = pivot_produtos_reset['Mês'].dt.strftime('%b/%Y')
-        
-        fig_area_produtos = px.area(
-            pivot_produtos_reset,
-            x='Mês',
-            y=pivot_produtos.columns[1:],  # Exclui a coluna Mês
-            title='<b>📦 Evolução dos Top 5 Produtos por Mês</b>',
-            template='plotly_white'
+    # NOVA TABELA DE VISUALIZAÇÃO ANUAL (substitui os gráficos removidos)
+    st.subheader("📊 Visão Anual - Comparativo de Desempenho")
+    
+    if not vendas_anuais.empty:
+        # Prepara dados para a tabela anual
+        tabela_anual = vendas_anuais.copy()
+        tabela_anual['Venda Anual Formatada'] = tabela_anual['Venda Anual'].apply(
+            lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         )
         
-        fig_area_produtos.update_layout(
-            xaxis=dict(title='Mês'),
-            yaxis=dict(title='Valor em R$')
+        # Calcula crescimento anual
+        tabela_anual = tabela_anual.sort_values('Ano')
+        tabela_anual['Crescimento Anual'] = tabela_anual['Venda Anual'].pct_change() * 100
+        tabela_anual['Crescimento Anual'] = tabela_anual['Crescimento Anual'].fillna(0).round(1)
+        
+        # Ordena do ano mais recente para o mais antigo
+        tabela_anual = tabela_anual.sort_values('Ano', ascending=False)
+        
+        # Formata crescimento
+        tabela_anual['Crescimento Formatado'] = tabela_anual['Crescimento Anual'].apply(
+            lambda x: f"{x:+.1f}%" if pd.notnull(x) else "-"
         )
         
-        st.plotly_chart(fig_area_produtos, use_container_width=True)
+        # Exibe tabela formatada
+        st.dataframe(
+            tabela_anual[['Ano', 'Venda Anual Formatada', 'Crescimento Formatado']],
+            use_container_width=True,
+            column_config={
+                'Ano': 'Ano',
+                'Venda Anual Formatada': 'Vendas Anuais',
+                'Crescimento Formatado': 'Crescimento vs Ano Anterior'
+            }
+        )
 
-    # HEATMAP - CALENDÁRIO DE VENDAS
-    st.subheader("🔥 Heatmap de Vendas Mensais")
-    if not vendas_mensais.empty:
-        # Prepara dados para heatmap (exemplo: últimos 12 meses)
-        ultimos_12_meses = vendas_mensais.tail(12).copy()
-        ultimos_12_meses['Ano'] = ultimos_12_meses['Mês'].dt.year
-        ultimos_12_meses['Mês_Num'] = ultimos_12_meses['Mês'].dt.month
-        
-        fig_heatmap = px.density_heatmap(
-            ultimos_12_meses,
-            x='Mês_Num',
-            y='Ano',
-            z='Venda Mensal',
-            title='<b>🔥 Intensidade de Vendas por Mês/Ano</b>',
-            color_continuous_scale='viridis',
-            template='plotly_white'
-        )
-        
-        fig_heatmap.update_layout(
-            xaxis=dict(title='Mês', tickvals=list(range(1,13)), ticktext=['Jan','Fev','Mar','Abr','Mai','Jun',
-                                                                         'Jul','Ago','Set','Out','Nov','Dez']),
-            yaxis=dict(title='Ano')
-        )
-        
-        st.plotly_chart(fig_heatmap, use_container_width=True)
-
-    # TABELA RESUMO MENSAL
+    # TABELA RESUMO MENSAL DETALHADA
     st.subheader("📋 Resumo Mensal Detalhado")
     if not vendas_mensais.empty:
         resumo_mensal = vendas_mensais.copy()
@@ -541,5 +533,10 @@ with tab2:
         
         st.dataframe(
             resumo_mensal[['Mês Formatado', 'Venda Mensal Formatada', 'Variação %']],
-            use_container_width=True
+            use_container_width=True,
+            column_config={
+                'Mês Formatado': 'Mês',
+                'Venda Mensal Formatada': 'Vendas Mensais',
+                'Variação %': 'Variação Mensal'
+            }
         )
