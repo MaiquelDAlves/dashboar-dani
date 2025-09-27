@@ -129,7 +129,7 @@ with st.sidebar:
     dt_inicio = st.date_input("Data Início:", value=primeiro_dia, format="DD/MM/YYYY")
     dt_fim = st.date_input("Data Fim:", value=ultimo_dia, format="DD/MM/YYYY")
     
-    # NOVO: Filtro de matriz/loja
+    # Filtro de matriz/loja
     matrizes_disponiveis = ['Todas'] + sorted(filtro_df_vendas['Matriz'].dropna().unique().tolist())
     matriz_selecionada = st.selectbox(
         "Selecione a Matriz:",
@@ -410,7 +410,7 @@ with tab2:
     # ---------------------------
     st.subheader("📊 Evolução Mensal de Vendas")
     
-    # Métricas mensais simplificadas (removidas as que você não gostou)
+    # Métricas mensais simplificadas
     if not vendas_mensais.empty:
         ultimo_mes_valor = vendas_mensais['Venda Mensal'].iloc[-1]
         penultimo_mes_valor = vendas_mensais['Venda Mensal'].iloc[-2] if len(vendas_mensais) > 1 else 0
@@ -481,8 +481,58 @@ with tab2:
         
         st.plotly_chart(fig_barras_matriz, use_container_width=True)
 
-    # NOVA TABELA DE VISUALIZAÇÃO ANUAL (substitui os gráficos removidos)
-    st.subheader("📊 Visão Anual - Comparativo de Desempenho")
+    # NOVO GRÁFICO DE BARRAS COMPARATIVO MENSAL
+    st.subheader("📊 Comparativo Mensal com Variação")
+    
+    if len(vendas_mensais) > 1:
+        # Prepara dados para o gráfico comparativo
+        comparativo_mensal = vendas_mensais.copy()
+        
+        # Calcula variação percentual mês a mês
+        comparativo_mensal['Variação %'] = comparativo_mensal['Venda Mensal'].pct_change() * 100
+        comparativo_mensal['Variação %'] = comparativo_mensal['Variação %'].fillna(0)
+        
+        # Cria coluna para cor baseada na variação (verde para positivo, vermelho para negativo)
+        comparativo_mensal['Cor'] = comparativo_mensal['Variação %'].apply(
+            lambda x: '#4ECDC4' if x >= 0 else '#FF6B6B'
+        )
+        
+        # Cria labels para as barras com os valores
+        comparativo_mensal['Label'] = comparativo_mensal.apply(
+            lambda x: f"R$ {x['Venda Mensal']:,.0f}<br>({x['Variação %']:+.1f}%)".replace(",", "X").replace(".", ",").replace("X", "."),
+            axis=1
+        )
+        
+        # Gráfico de barras comparativo
+        fig_comparativo = go.Figure()
+        
+        fig_comparativo.add_trace(go.Bar(
+            x=comparativo_mensal['Mês Formatado'],
+            y=comparativo_mensal['Venda Mensal'],
+            text=comparativo_mensal['Label'],
+            textposition='auto',
+            marker_color=comparativo_mensal['Cor'],
+            hovertemplate=(
+                '<b>Mês:</b> %{x}<br>'
+                '<b>Vendas:</b> R$ %{y:,.2f}<br>'
+                '<b>Variação:</b> %{customdata:.1f}%<extra></extra>'
+            ),
+            customdata=comparativo_mensal['Variação %']
+        ))
+        
+        fig_comparativo.update_layout(
+            title='<b>📊 Comparativo Mensal com Variação Percentual</b>',
+            xaxis=dict(title='Mês', tickangle=45),
+            yaxis=dict(title='Valor em R$'),
+            template='plotly_white',
+            showlegend=False
+        )
+        
+        st.plotly_chart(fig_comparativo, use_container_width=True)
+        
+
+    # NOVA TABELA DE VISUALIZAÇÃO ANUAL
+    st.subheader("📈 Visão Anual - Comparativo de Desempenho")
     
     if not vendas_anuais.empty:
         # Prepara dados para a tabela anual
