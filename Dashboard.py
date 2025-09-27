@@ -690,13 +690,11 @@ with tab3:
         meses_nomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         
-        # Mapeia nomes dos meses para números para ordenação correta
         mes_para_numero = {
             'Janeiro': 1, 'Fevereiro': 2, 'Março': 3, 'Abril': 4, 'Maio': 5, 'Junho': 6,
             'Julho': 7, 'Agosto': 8, 'Setembro': 9, 'Outubro': 10, 'Novembro': 11, 'Dezembro': 12
         }
         
-        # CORREÇÃO: Garante ordenação correta dos dados
         vendas_comparativo['Mês_Numero'] = vendas_comparativo['Mês_Nome'].map(mes_para_numero)
         vendas_comparativo_ordenado = vendas_comparativo.sort_values(['Ano', 'Mês_Numero'])
         
@@ -704,8 +702,6 @@ with tab3:
         # GRÁFICO DE COMPARAÇÃO MENSAL ENTRE ANOS
         # ---------------------------
         st.subheader("📈 Comparativo Mensal entre Anos")
-        
-        vendas_comparativo_ordenado['Ano_Mês'] = vendas_comparativo_ordenado['Ano'].astype(str) + ' - ' + vendas_comparativo_ordenado['Mês_Nome']
         
         fig_comparativo_anos = px.line(
             vendas_comparativo_ordenado,
@@ -726,42 +722,27 @@ with tab3:
         st.plotly_chart(fig_comparativo_anos, use_container_width=True)
         
         # ---------------------------
-        # GRÁFICO DE BARRAS COMPARATIVO - CORREÇÃO COMPLETA
+        # GRÁFICO DE BARRAS COMPARATIVO - INTERCALADO POR ANO
         # ---------------------------
         st.subheader("📊 Comparativo por Mês - Visão Detalhada")
         
-        # CORREÇÃO SIMPLIFICADA: Usar os dados reais em vez de criar DataFrame artificial
-        # Criar coluna combinada para ordenação intercalada
-        vendas_comparativo_ordenado['Ano_Mês_Combinado'] = vendas_comparativo_ordenado['Ano'].astype(str) + ' - ' + vendas_comparativo_ordenado['Mês_Nome']
-        
-        # ORDEM INTERCALADA CORRETA: Janeiro 2024, Janeiro 2025, Fevereiro 2024, Fevereiro 2025, etc.
-        meses_ordenados = []
-        anos_ordenados = sorted(vendas_comparativo_ordenado['Ano'].unique())
-        
-        for mes in meses_nomes:
-            for ano in anos_ordenados:
-                combinacao = f"{ano} - {mes}"
-                # Verificar se essa combinação existe nos dados
-                if combinacao in vendas_comparativo_ordenado['Ano_Mês_Combinado'].values:
-                    meses_ordenados.append(combinacao)
-        
-        # CORREÇÃO: Verificar se temos dados para o gráfico
         if not vendas_comparativo_ordenado.empty:
             fig_barras_comparativo = px.bar(
                 vendas_comparativo_ordenado,
-                x='Ano_Mês_Combinado',
+                x='Mês_Nome',        # agora só o mês
                 y='Valor Total',
-                color='Ano',
+                color='Ano',         # cores por ano
                 title='<b>Comparativo de Vendas por Mês (Barras Intercaladas)</b>',
                 template='plotly_white'
             )
             
+            # 🔑 Forçar intercaladas (lado a lado)
             fig_barras_comparativo.update_layout(
+                barmode='group',     # <- ESSENCIAL para não empilhar
                 xaxis=dict(
-                    title='Mês - Ano', 
+                    title='Mês', 
                     categoryorder='array', 
-                    categoryarray=meses_ordenados,
-                    tickangle=45
+                    categoryarray=meses_nomes
                 ),
                 yaxis=dict(title='Valor em R$'),
                 showlegend=True
@@ -776,7 +757,6 @@ with tab3:
         # ---------------------------
         st.subheader("📋 Tabela Comparativa Detalhada")
         
-        # CORREÇÃO: Usar pivot_table de forma correta
         tabela_completa = vendas_comparativo_ordenado.pivot_table(
             index='Mês_Nome',
             columns='Ano',
@@ -785,18 +765,13 @@ with tab3:
             fill_value=0
         ).reset_index()
         
-        # Adicionar coluna de número do mês para ordenação
         tabela_completa['Mês_Numero'] = tabela_completa['Mês_Nome'].map(mes_para_numero)
         tabela_completa = tabela_completa.sort_values('Mês_Numero')
-        
-        # Remover coluna de número do mês da exibição
         tabela_exibicao = tabela_completa.drop('Mês_Numero', axis=1)
         
-        # CORREÇÃO: Verificar se as colunas de ano existem antes de calcular diferenças
         colunas_ano = [col for col in tabela_exibicao.columns if col != 'Mês_Nome']
         
         if len(colunas_ano) >= 2:
-            # Ordenar anos numericamente
             anos_tabela = sorted([int(col) for col in colunas_ano], reverse=True)
             
             for i in range(1, len(anos_tabela)):
@@ -807,68 +782,54 @@ with tab3:
                     coluna_diferenca = f'Diferença {ano_anterior}-{ano_atual}'
                     coluna_crescimento = f'Crescimento % {ano_anterior}-{ano_atual}'
                     
-                    # Calcular diferença
                     tabela_exibicao[coluna_diferenca] = (
                         tabela_exibicao[str(ano_atual)] - tabela_exibicao[str(ano_anterior)]
                     )
                     
-                    # Calcular crescimento percentual
                     tabela_exibicao[coluna_crescimento] = (
                         (tabela_exibicao[str(ano_atual)] - tabela_exibicao[str(ano_anterior)]) / 
                         tabela_exibicao[str(ano_anterior)].replace(0, float('nan')) * 100
                     ).round(2)
         
-        # Formatação final
         tabela_formatada = tabela_exibicao.copy()
         
         for col in tabela_formatada.columns:
             if col == 'Mês_Nome':
                 continue
-                
-            # CORREÇÃO: Verificar se a coluna é string antes de usar 'in'
             if isinstance(col, str) and 'Crescimento' in col:
                 tabela_formatada[col] = tabela_formatada[col].apply(
-                    lambda x: f"{x:+.1f}%" if pd.notnull(x) and not pd.isna(x) else "-"
+                    lambda x: f"{x:+.1f}%" if pd.notnull(x) else "-"
                 )
             else:
-                # Colunas de valores monetários
                 tabela_formatada[col] = tabela_formatada[col].apply(
                     lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") 
-                    if pd.notnull(x) and not pd.isna(x) else "R$ 0,00"
+                    if pd.notnull(x) else "R$ 0,00"
                 )
         
-        # Exibir tabela
         st.dataframe(tabela_formatada, use_container_width=True)
         
         # ---------------------------
-        # COMPARAÇÃO DE PERFORMANCE POR QUARTER - BARRAS INTERCALADAS
+        # COMPARAÇÃO DE PERFORMANCE POR QUARTER
         # ---------------------------
         st.subheader("📅 Performance por Quarter")
         
         vendas_comparativo['Quarter'] = 'Q' + (((vendas_comparativo['Mês'] - 1) // 3) + 1).astype(str)
         performance_quarter = vendas_comparativo.groupby(['Ano', 'Quarter'])['Valor Total'].sum().reset_index()
         
-        # CORREÇÃO: Criar coluna combinada para barras intercaladas
         performance_quarter['Ano_Quarter'] = performance_quarter['Ano'].astype(str) + ' - ' + performance_quarter['Quarter']
         
-        # Ordem correta dos quarters intercalados: Q1/2024, Q1/2025, Q2/2024, Q2/2025, etc.
-        quarters_ordenados = []
         quarter_ordem = ['Q1', 'Q2', 'Q3', 'Q4']
+        quarters_ordenados = [f"{ano} - {q}" for q in quarter_ordem for ano in sorted(anos_comparacao)]
         
-        for quarter in quarter_ordem:
-            for ano in sorted(anos_comparacao):
-                combinacao = f"{ano} - {quarter}"
-                quarters_ordenados.append(combinacao)
-        
-        # CORREÇÃO: Verificar se temos dados para o gráfico de quarter
         if not performance_quarter.empty:
             fig_quarter = px.bar(
                 performance_quarter,
                 x='Ano_Quarter',
                 y='Valor Total',
                 color='Ano',
-                title='<b>Comparativo de Performance por Quarter (Barras Intercaladas)</b>',
-                template='plotly_white'
+                title='<b>Comparativo de Performance por Quarter</b>',
+                template='plotly_white',
+                barmode='group'
             )
             
             fig_quarter.update_layout(
@@ -885,9 +846,8 @@ with tab3:
             st.plotly_chart(fig_quarter, use_container_width=True)
         else:
             st.info("📊 Não há dados suficientes para exibir o gráfico de quarters")
-        
+    
     else:
-        # Mensagem mais específica
         if not anos_comparacao:
             st.info("📊 Selecione pelo menos um ano para visualizar os comparativos")
         elif vendas_comparativo.empty:
