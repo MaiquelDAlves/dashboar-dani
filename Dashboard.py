@@ -461,27 +461,32 @@ with tab2:
         
         st.plotly_chart(fig_linha_mensal, use_container_width=True)
 
-    # GRÁFICO DE BARRAS - COMPARAÇÃO MENSAL POR MATRIZ
+    # GRÁFICO DE BARRAS - COMPARAÇÃO MENSAL POR MATRIZ (CORRIGIDO)
     st.subheader("🏢 Vendas Mensais por Matriz")
     if not vendas_mensais_matriz.empty:
+        # CORREÇÃO: Ordena por data para garantir ordem cronológica
+        vendas_mensais_matriz_ordenado = vendas_mensais_matriz.sort_values('Mês')
+        
         fig_barras_matriz = px.bar(
-            vendas_mensais_matriz,
+            vendas_mensais_matriz_ordenado,
             x='Mês Formatado',
             y='Venda Mensal',
             color='Matriz',
             title='<b>🏢 Vendas por Matriz (Mensal)</b>',
             barmode='group',
-            template='plotly_white'
+            template='plotly_white',
+            category_orders={"Mês Formatado": vendas_mensais_matriz_ordenado['Mês Formatado'].tolist()}
         )
         
         fig_barras_matriz.update_layout(
-            xaxis=dict(title='Mês'),
+            xaxis=dict(title='Mês', type='category', categoryorder='array', 
+                      categoryarray=vendas_mensais_matriz_ordenado['Mês Formatado'].tolist()),
             yaxis=dict(title='Valor em R$')
         )
         
         st.plotly_chart(fig_barras_matriz, use_container_width=True)
 
-    # NOVO GRÁFICO DE BARRAS COMPARATIVO MENSAL
+    # GRÁFICO DE BARRAS COMPARATIVO MENSAL (COM CORES VERMELHO/VERDE)
     st.subheader("📊 Comparativo Mensal com Variação")
     
     if len(vendas_mensais) > 1:
@@ -492,26 +497,26 @@ with tab2:
         comparativo_mensal['Variação %'] = comparativo_mensal['Venda Mensal'].pct_change() * 100
         comparativo_mensal['Variação %'] = comparativo_mensal['Variação %'].fillna(0)
         
+        # Ordena por data para garantir ordem cronológica
+        comparativo_mensal = comparativo_mensal.sort_values('Mês')
+        
         # Cria coluna para cor baseada na variação (verde para positivo, vermelho para negativo)
         comparativo_mensal['Cor'] = comparativo_mensal['Variação %'].apply(
-            lambda x: '#4ECDC4' if x >= 0 else '#FF6B6B'
+            lambda x: '#00cc96' if x >= 0 else '#ef553b'  # Cores do Plotly que funcionam bem
         )
         
-        # Cria labels para as barras com os valores
-        comparativo_mensal['Label'] = comparativo_mensal.apply(
-            lambda x: f"R$ {x['Venda Mensal']:,.0f}<br>({x['Variação %']:+.1f}%)".replace(",", "X").replace(".", ",").replace("X", "."),
-            axis=1
-        )
-        
-        # Gráfico de barras comparativo
+        # Gráfico de barras comparativo com cores personalizadas
         fig_comparativo = go.Figure()
         
         fig_comparativo.add_trace(go.Bar(
             x=comparativo_mensal['Mês Formatado'],
             y=comparativo_mensal['Venda Mensal'],
-            text=comparativo_mensal['Label'],
-            textposition='auto',
             marker_color=comparativo_mensal['Cor'],
+            text=comparativo_mensal.apply(
+                lambda x: f"R$ {x['Venda Mensal']:,.0f}<br>({x['Variação %']:+.1f}%)".replace(",", "X").replace(".", ",").replace("X", "."),
+                axis=1
+            ),
+            textposition='outside',
             hovertemplate=(
                 '<b>Mês:</b> %{x}<br>'
                 '<b>Vendas:</b> R$ %{y:,.2f}<br>'
@@ -522,16 +527,26 @@ with tab2:
         
         fig_comparativo.update_layout(
             title='<b>📊 Comparativo Mensal com Variação Percentual</b>',
-            xaxis=dict(title='Mês', tickangle=45),
+            xaxis=dict(
+                title='Mês', 
+                type='category', 
+                categoryorder='array',
+                categoryarray=comparativo_mensal['Mês Formatado'].tolist()
+            ),
             yaxis=dict(title='Valor em R$'),
             template='plotly_white',
-            showlegend=False
+            showlegend=False,
+            uniformtext_minsize=8,
+        )
+        
+        # Ajusta a margem superior para acomodar os textos acima das barras
+        fig_comparativo.update_layout(
+            margin=dict(t=100)  # Aumenta a margem superior
         )
         
         st.plotly_chart(fig_comparativo, use_container_width=True)
-        
 
-    # NOVA TABELA DE VISUALIZAÇÃO ANUAL
+    # TABELA DE VISUALIZAÇÃO ANUAL
     st.subheader("📈 Visão Anual - Comparativo de Desempenho")
     
     if not vendas_anuais.empty:
