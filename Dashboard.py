@@ -71,6 +71,15 @@ filtro_df_vendas["Valor Total"] = (
     .astype(float)
 )
 
+# Converte Quantidade para numérico
+filtro_df_vendas["Quantidade"] = (
+    filtro_df_vendas["Quantidade"]
+    .astype(str)
+    .str.replace(",", ".", regex=False)
+    .replace("", 0)
+    .astype(float)
+)
+
 # Formata valor para exibição em Real brasileiro
 filtro_df_vendas["Valor Venda"] = filtro_df_vendas["Valor Total"].apply(
     lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -134,15 +143,30 @@ filtro_df_metas_filtrado = filtro_df_metas[
 # ---------------------------
 # PREPARAÇÃO DOS DADOS PARA OS GRÁFICOS
 # ---------------------------
-# Agrupa vendas por dia para o gráfico de barras
+# Dados para gráficos de matriz (existentes)
 vendas_diarias = df_vendas_filtrado.groupby(df_vendas_filtrado.index.date)['Valor Total'].sum().reset_index()
 vendas_diarias.columns = ['Data', 'Venda Diária']
 vendas_diarias['Data'] = pd.to_datetime(vendas_diarias['Data'])
 
-# Agrupa vendas por matriz para o gráfico de pizza
 vendas_por_matriz = df_vendas_filtrado.groupby('Matriz')['Valor Total'].sum().reset_index()
 vendas_por_matriz.columns = ['Matriz', 'Valor Total']
 vendas_por_matriz = vendas_por_matriz.sort_values('Valor Total', ascending=False)
+
+# NOVOS DADOS PARA GRÁFICOS DE PRODUTOS POR QUANTIDADE
+produtos_quantidade = df_vendas_filtrado.groupby('Descrição')['Quantidade'].sum().reset_index()
+produtos_quantidade.columns = ['Produto', 'Quantidade Total']
+produtos_quantidade = produtos_quantidade.sort_values('Quantidade Total', ascending=False)
+
+# Limita aos top 10 produtos para melhor visualização
+produtos_quantidade_top10 = produtos_quantidade.head(10)
+
+# NOVOS DADOS PARA GRÁFICOS DE PRODUTOS POR VALOR
+produtos_valor = df_vendas_filtrado.groupby('Descrição')['Valor Total'].sum().reset_index()
+produtos_valor.columns = ['Produto', 'Valor Total']
+produtos_valor = produtos_valor.sort_values('Valor Total', ascending=False)
+
+# Limita aos top 10 produtos para melhor visualização
+produtos_valor_top10 = produtos_valor.head(10)
 
 # ---------------------------
 # CÁLCULO DE MÉTRICAS
@@ -168,11 +192,10 @@ with col3:
     st.metric("% Atingido", percentual_formatado)
 
 # ---------------------------
-# GRÁFICOS MODERNOS
+# GRÁFICOS MODERNOS - MATRIZ (ORIGINAIS)
 # ---------------------------
-st.subheader("📈 Visualizações")
+st.subheader("🏢 Análise por Matriz")
 
-# Container para os gráficos
 col1, col2 = st.columns(2)
 
 with col1:
@@ -189,7 +212,6 @@ with col1:
             template='plotly_white'
         )
         
-        # Personaliza o gráfico de barras
         fig_barras.update_layout(
             xaxis=dict(tickformat='%d/%m', title='Data'),
             yaxis=dict(title='Valor em R$'),
@@ -214,11 +236,10 @@ with col2:
             names='Matriz',
             title='<b>🏢 Participação por Matriz</b>',
             color_discrete_sequence=px.colors.qualitative.Set3,
-            hole=0.4,  # Cria um gráfico donut
+            hole=0.4,
             template='plotly_white'
         )
         
-        # Personaliza o gráfico de pizza
         fig_pizza.update_layout(
             legend=dict(
                 orientation="v",
@@ -240,6 +261,148 @@ with col2:
         st.info(f"🏢 Apenas uma matriz encontrada: {vendas_por_matriz['Matriz'].iloc[0]}")
     else:
         st.info("🏢 Não há dados de matriz para o período selecionado")
+
+# ---------------------------
+# NOVOS GRÁFICOS - PRODUTOS POR QUANTIDADE
+# ---------------------------
+st.subheader("📦 Análise de Produtos por Quantidade")
+
+col3, col4 = st.columns(2)
+
+with col3:
+    # GRÁFICO DE BARRAS - PRODUTOS POR QUANTIDADE
+    if not produtos_quantidade_top10.empty:
+        fig_barras_quantidade = px.bar(
+            produtos_quantidade_top10, 
+            x='Produto', 
+            y='Quantidade Total',
+            title='<b>📦 Top 10 Produtos por Quantidade</b>',
+            labels={'Quantidade Total': 'Quantidade', 'Produto': 'Produto'},
+            color='Quantidade Total',
+            color_continuous_scale='blues',
+            template='plotly_white'
+        )
+        
+        fig_barras_quantidade.update_layout(
+            xaxis=dict(title='Produtos', tickangle=45),
+            yaxis=dict(title='Quantidade Vendida'),
+            showlegend=False
+        )
+        
+        fig_barras_quantidade.update_traces(
+            hovertemplate='<b>%{x}</b><br>Quantidade: %{y:,.0f} unidades<extra></extra>'
+        )
+        
+        st.plotly_chart(fig_barras_quantidade, use_container_width=True)
+    else:
+        st.info("📦 Não há dados de quantidade por produto")
+
+with col4:
+    # GRÁFICO DE PIZZA - PARTICIPAÇÃO POR QUANTIDADE
+    if not produtos_quantidade.empty and len(produtos_quantidade) > 1:
+        # Pega os top 8 e agrupa o restante como "Outros"
+        if len(produtos_quantidade) > 8:
+            top_produtos = produtos_quantidade.head(8)
+            outros = pd.DataFrame({
+                'Produto': ['Outros'],
+                'Quantidade Total': [produtos_quantidade['Quantidade Total'].iloc[8:].sum()]
+            })
+            produtos_pizza_quantidade = pd.concat([top_produtos, outros])
+        else:
+            produtos_pizza_quantidade = produtos_quantidade
+        
+        fig_pizza_quantidade = px.pie(
+            produtos_pizza_quantidade,
+            values='Quantidade Total',
+            names='Produto',
+            title='<b>📦 Participação por Quantidade</b>',
+            color_discrete_sequence=px.colors.qualitative.Pastel,
+            hole=0.4,
+            template='plotly_white'
+        )
+        
+        fig_pizza_quantidade.update_traces(
+            textposition='inside',
+            textinfo='percent+label',
+            hovertemplate='<b>%{label}</b><br>Participação: %{percent}<br>Quantidade: %{value:,.0f} un.<extra></extra>'
+        )
+        
+        st.plotly_chart(fig_pizza_quantidade, use_container_width=True)
+    elif len(produtos_quantidade) == 1:
+        st.info(f"📦 Apenas um produto encontrado: {produtos_quantidade['Produto'].iloc[0]}")
+    else:
+        st.info("📦 Não há dados de produtos para o período selecionado")
+
+# ---------------------------
+# NOVOS GRÁFICOS - PRODUTOS POR VALOR
+# ---------------------------
+st.subheader("💰 Análise de Produtos por Valor")
+
+col5, col6 = st.columns(2)
+
+with col5:
+    # GRÁFICO DE BARRAS - PRODUTOS POR VALOR
+    if not produtos_valor_top10.empty:
+        fig_barras_valor = px.bar(
+            produtos_valor_top10, 
+            x='Produto', 
+            y='Valor Total',
+            title='<b>💰 Top 10 Produtos por Valor</b>',
+            labels={'Valor Total': 'Valor (R$)', 'Produto': 'Produto'},
+            color='Valor Total',
+            color_continuous_scale='greens',
+            template='plotly_white'
+        )
+        
+        fig_barras_valor.update_layout(
+            xaxis=dict(title='Produtos', tickangle=45),
+            yaxis=dict(title='Valor em R$'),
+            showlegend=False
+        )
+        
+        fig_barras_valor.update_traces(
+            hovertemplate='<b>%{x}</b><br>Valor: R$ %{y:,.2f}<extra></extra>'
+        )
+        
+        st.plotly_chart(fig_barras_valor, use_container_width=True)
+    else:
+        st.info("💰 Não há dados de valor por produto")
+
+with col6:
+    # GRÁFICO DE PIZZA - PARTICIPAÇÃO POR VALOR
+    if not produtos_valor.empty and len(produtos_valor) > 1:
+        # Pega os top 8 e agrupa o restante como "Outros"
+        if len(produtos_valor) > 8:
+            top_produtos = produtos_valor.head(8)
+            outros = pd.DataFrame({
+                'Produto': ['Outros'],
+                'Valor Total': [produtos_valor['Valor Total'].iloc[8:].sum()]
+            })
+            produtos_pizza_valor = pd.concat([top_produtos, outros])
+        else:
+            produtos_pizza_valor = produtos_valor
+        
+        fig_pizza_valor = px.pie(
+            produtos_pizza_valor,
+            values='Valor Total',
+            names='Produto',
+            title='<b>💰 Participação por Valor</b>',
+            color_discrete_sequence=px.colors.qualitative.Bold,
+            hole=0.4,
+            template='plotly_white'
+        )
+        
+        fig_pizza_valor.update_traces(
+            textposition='inside',
+            textinfo='percent+label',
+            hovertemplate='<b>%{label}</b><br>Participação: %{percent}<br>Valor: R$ %{value:,.2f}<extra></extra>'
+        )
+        
+        st.plotly_chart(fig_pizza_valor, use_container_width=True)
+    elif len(produtos_valor) == 1:
+        st.info(f"💰 Apenas um produto encontrado: {produtos_valor['Produto'].iloc[0]}")
+    else:
+        st.info("💰 Não há dados de produtos para o período selecionado")
 
 # ---------------------------
 # GRÁFICO ADICIONAL - EVOLUÇÃO TEMPORAL
@@ -282,27 +445,42 @@ df_view_vendas = df_vendas_filtrado.copy()
 df_exibicao_vendas = df_view_vendas[COLUNAS_EXIBICAO_VENDAS].reset_index(drop=True)
 df_exibicao_vendas = df_exibicao_vendas.set_index("Data Venda")
 
-# Adiciona algumas métricas sobre a tabela
 st.write(f"**Total de registros:** {len(df_exibicao_vendas)}")
 st.write(f"**Período:** {dt_inicio.strftime('%d/%m/%Y')} a {dt_fim.strftime('%d/%m/%Y')}")
 
 st.dataframe(df_exibicao_vendas, use_container_width=True)
 
 # ---------------------------
-# RESUMO POR MATRIZ (Tabela)
+# RESUMOS POR MATRIZ E PRODUTOS (Tabelas)
 # ---------------------------
-st.subheader("🏢 Resumo por Matriz")
+st.subheader("📊 Resumos Consolidados")
 
-if not vendas_por_matriz.empty:
-    # Formata os valores para exibição
-    vendas_por_matriz_display = vendas_por_matriz.copy()
-    vendas_por_matriz_display['Valor Total'] = vendas_por_matriz_display['Valor Total'].apply(
-        lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    )
-    
-    # Calcula percentual de participação
-    total_geral = vendas_por_matriz['Valor Total'].sum()
-    vendas_por_matriz['Participação'] = (vendas_por_matriz['Valor Total'] / total_geral * 100).round(2)
-    vendas_por_matriz_display['Participação'] = vendas_por_matriz['Participação'].apply(lambda x: f"{x}%")
-    
-    st.dataframe(vendas_por_matriz_display, use_container_width=True)
+col7, col8 = st.columns(2)
+
+with col7:
+    # RESUMO POR MATRIZ
+    st.write("**🏢 Resumo por Matriz**")
+    if not vendas_por_matriz.empty:
+        resumo_matriz = vendas_por_matriz.copy()
+        resumo_matriz['Valor Total'] = resumo_matriz['Valor Total'].apply(
+            lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        )
+        total_geral = vendas_por_matriz['Valor Total'].sum()
+        resumo_matriz['Participação'] = (vendas_por_matriz['Valor Total'] / total_geral * 100).round(2)
+        resumo_matriz['Participação'] = resumo_matriz['Participação'].apply(lambda x: f"{x}%")
+        
+        st.dataframe(resumo_matriz, use_container_width=True)
+
+with col8:
+    # RESUMO POR PRODUTO (VALOR)
+    st.write("**💰 Top Produtos por Valor**")
+    if not produtos_valor.empty:
+        resumo_produtos = produtos_valor.head(10).copy()
+        resumo_produtos['Valor Total'] = resumo_produtos['Valor Total'].apply(
+            lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        )
+        total_geral = produtos_valor['Valor Total'].sum()
+        resumo_produtos['Participação'] = (produtos_valor.head(10)['Valor Total'] / total_geral * 100).round(2)
+        resumo_produtos['Participação'] = resumo_produtos['Participação'].apply(lambda x: f"{x}%")
+        
+        st.dataframe(resumo_produtos, use_container_width=True)
