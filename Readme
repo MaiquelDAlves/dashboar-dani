@@ -1,0 +1,36 @@
+# Dashboard Dani
+
+![Python](https://img.shields.io/badge/python-3.13+-blue)
+![Streamlit](https://img.shields.io/badge/streamlit-latest-orange)
+
+Sistema de **autenticação simples em Streamlit** para controlar acesso a dashboards e relatórios. Suporta **login local** via `.env` e **login na nuvem** via `secrets.toml` no Streamlit Cloud.
+
+---
+
+## Funcionalidades
+
+- Autenticação de usuários com senha em **texto simples**
+- Suporte a **manter login por 30 dias**
+- Logout automático ao expirar sessão
+- Compatível com:
+  - Execução **local** usando `.env`
+  - Streamlit Cloud usando `secrets.toml`
+
+---
+
+## Tecnologias
+
+- [Python 3.13+](https://www.python.org/)
+- [Streamlit](https://streamlit.io/)
+- [python-dotenv](https://pypi.org/project/python-dotenv/)
+
+---
+
+## Instalação Local
+
+1. Clone o repositório:
+
+```bash
+git clone https://github.com/seuusuario/dashboard-dani.git
+cd dashboard-dani
+```
