@@ -4,26 +4,24 @@ import hashlib
 import os
 from dotenv import load_dotenv
 
-# Carrega variáveis do .env localmente
+# Carrega variáveis do .env apenas localmente
 load_dotenv()
 
-def get_usuarios():
-    """Retorna dicionário {usuario: senha_hash}"""
-    if hasattr(st, "secrets") and "auth" in st.secrets:
-        # Streamlit Cloud
-        return dict(st.secrets["auth"])
-    else:
-        # Local
-        usuarios = {}
-        if os.getenv("USUARIO_MAIQUEL"):
-            usuarios["maiquel"] = hashlib.sha256(os.getenv("USUARIO_MAIQUEL").encode()).hexdigest()
-        if os.getenv("USUARIO_DANIELA"):
-            usuarios["daniela"] = hashlib.sha256(os.getenv("USUARIO_DANIELA").encode()).hexdigest()
-        return usuarios
+def get_usuario_senha(usuario):
+    """
+    Obtém a senha do usuário do .env (local) ou st.secrets (Streamlit Cloud)
+    """
+    try:
+        # Tenta primeiro o Streamlit Secrets (produção)
+        if hasattr(st, 'secrets') and 'USUARIOS' in st.secrets:
+            return st.secrets['USUARIOS'].get(usuario.lower(), "")
+        else:
+            # Fallback para .env (desenvolvimento local)
+            chave_env = f"USUARIO_{usuario.upper()}"
+            return os.getenv(chave_env, "")
+    except Exception:
+        return ""
 
-# -------------------------
-# Autenticação
-# -------------------------
 def init_auth():
     if "auth" not in st.session_state:
         st.session_state.auth = {
@@ -35,12 +33,22 @@ def init_auth():
 def autenticar_usuario(usuario, senha):
     if not usuario or not senha:
         return False
-    usuarios = get_usuarios()
+    
+    # Obtém a senha correta do ambiente
+    senha_correta = get_usuario_senha(usuario)
+    
+    if not senha_correta:
+        return False
+    
+    # Verifica a senha
     senha_hash = hashlib.sha256(senha.encode()).hexdigest()
-    return usuario in usuarios and usuarios[usuario] == senha_hash
+    senha_correta_hash = hashlib.sha256(senha_correta.encode()).hexdigest()
+    
+    return senha_hash == senha_correta_hash
 
 def login():
     init_auth()
+
     if st.session_state.auth["logado"]:
         expiracao = st.session_state.auth["expiracao"]
         if expiracao and datetime.now() < expiracao:
@@ -48,11 +56,11 @@ def login():
         else:
             logout()
 
-    st.title("Login")
+    st.title("🔐 Login - Dashboard Vendas")
     st.write("Por favor, faça login para acessar o sistema")
 
     with st.form("login_form"):
-        usuario = st.text_input("Usuário")
+        usuario = st.selectbox("Usuário", ["maiquel", "daniela"])
         senha = st.text_input("Senha", type="password")
         lembrar = st.checkbox("Manter conectado por 30 dias", value=True)
         submit = st.form_submit_button("Entrar")
